@@ -57,6 +57,13 @@ jobs:
       - name: 准备 electron-builder 缓存
         run: npm run prepare:builder
 
+      # --publish never 写在 package.json 的 dist 脚本里，不要去掉。
+      # 原因：electron-builder 在未配置 publish 时默认策略是 onTagOrDraft，
+      # 而它对 github provider 不做"无 tag 就跳过"的豁免（见
+      # app-builder-lib/out/publish/PublishManager.js 的 isPublish 判定），
+      # 于是构建完成后会自己去发布、发现没有 GH_TOKEN 就整步失败：
+      #   ⨯ GitHub Personal Access Token is not set ...
+      # 本项目的 Release 由下面的 gh release create 创建，builder 只负责出包。
       - name: 打包 NSIS 安装包
         run: npm run dist
 
