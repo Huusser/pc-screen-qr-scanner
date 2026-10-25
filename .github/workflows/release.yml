@@ -84,6 +84,11 @@ jobs:
           subject-path: |
             desktop/dist/ScreenQR-*-x64.exe
             desktop/dist/SHA256SUMS.txt
+          # 只生成 provenance，不创建 artifact storage record。
+          # 该开关默认 true，但它要求 artifact-metadata: write 权限，
+          # 且 GitHub 只为「组织所属仓库」创建存储记录——个人仓库开了也没用。
+          # 关掉可避免在个人仓库上因权限/归属限制整步失败。
+          create-storage-record: false
 
       - name: 留存构建产物
         uses: actions/upload-artifact@v4
