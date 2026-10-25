@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────
+# 换行与二进制规则
+#
+# 为什么要写这个文件：仓库里有 5 个 .bat 与 2 个 .ps1。Windows 的
+# cmd.exe 对纯 LF 的 .bat 解析会出错（尤其是带 goto/label 的多行
+# 块）；PowerShell 5.1 按本地代码页读无 BOM 的 .ps1，也依赖 CRLF。
+# 一旦某人在 autocrlf=false 的机器上 clone，或在 Linux/Mac 上
+# clone 后打包，这些文件会被写成 LF，症状是"bat 双击闪退"。
+# 用 git 属性钉死，任何人 clone 都得到原样。
+# ─────────────────────────────────────────────────────────────
+
+# 批处理与 PowerShell 脚本：强制 CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# 源码与文档：统一 LF（避免 diff 噪声）
+*.js      text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.py      text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+# 二进制：不做任何转换（否则 git 会尝试合并/改行尾，破坏文件）
+*.exe   binary
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.wav   binary
+*.mp3   binary
+*.zip   binary
+*.7z    binary
+*.pfx   binary
+*.p12   binary
+*.cer   binary
+*.crt   binary
+*.key   binary
+
+# 语言统计：文档多，不当作主要语言
+*.md linguist-documentation

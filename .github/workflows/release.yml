@@ -1,0 +1,104 @@
+name: Build & Release
+
+# 触发方式：
+#   1) 打 tag（v0.4.0）→ 构建 + 发布 Release（附带来源证明）
+#   2) 手动运行      → 只构建并留存 artifact，不发布（方便先验证）
+#
+# 这个仓库**不做代码签名**（见 代码签名-新手实操指南.md 〇·二）：
+# 开源项目靠「源码可审计 + 可自行构建 + 来源证明」，而不是买证书。
+# 因此下面显式关掉 electron-builder 的证书自动发现，避免它在 CI 上
+# 去找不存在的证书而报错。
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write      # 创建 Release
+  id-token: write      # Sigstore 短期证书（来源证明用）
+  attestations: write  # 写入 attestation
+
+jobs:
+  windows-x64:
+    name: Windows x64 build
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      # 开源项目不签名；CI 上也没有证书，显式关掉自动发现
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder 的二进制包（winCodeSign / nsis）走官方源；
+      # 国内本地构建时改成 https://npmmirror.com/mirrors/electron-builder-binaries/
+      ELECTRON_BUILDER_BINARIES_MIRROR: "https://github.com/electron-userland/electron-builder-binaries/releases/download/"
+
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 准备 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      # 内置 Python 运行时（约 22 MB）不进程仓库，构建时按钉死的 SHA-256 下载
+      - name: 取内置 Python 运行时
+        run: npm run runtime
+
+      # 预先补好 electron-builder 的缓存：
+      #   ① Electron 压缩包
+      #   ② winCodeSign（其内含 macOS 符号链接，没权限时 7za 会失败）
+      - name: 准备 electron-builder 缓存
+        run: npm run prepare:builder
+
+      - name: 打包 NSIS 安装包
+        run: npm run dist
+
+      - name: 生成 SHA-256 校验和
+        shell: bash
+        run: |
+          cd dist
+          # 只对安装包做校验和（目录形态不对外发布）
+          sha256sum ScreenQR-*-x64.exe > SHA256SUMS.txt
+          echo "---- SHA256SUMS.txt ----"
+          cat SHA256SUMS.txt
+
+      # 构建来源证明：证明「这个 exe 由本仓库的这个 commit、这段 workflow 构建」
+      # 用户可执行 gh attestation verify <文件> --repo <owner>/<repo> 自行核对
+      - name: 生成构建来源证明
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            desktop/dist/ScreenQR-*-x64.exe
+            desktop/dist/SHA256SUMS.txt
+
+      - name: 留存构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScreenQR-win-x64
+          if-no-files-found: error
+          path: |
+            desktop/dist/ScreenQR-*-x64.exe
+            desktop/dist/ScreenQR-*-x64.exe.blockmap
+            desktop/dist/latest.yml
+            desktop/dist/SHA256SUMS.txt
+
+      - name: 发布 Release（仅打 tag 时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "屏幕扫码 $TAG" \
+            --generate-notes \
+            dist/ScreenQR-*-x64.exe \
+            dist/ScreenQR-*-x64.exe.blockmap \
+            dist/SHA256SUMS.txt

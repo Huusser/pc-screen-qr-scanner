@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>框选扫码</title>
+<style>
+  :root {
+    --bg: #0c1017;
+    --panel: #161c26;
+    --panel-2: #1c2431;
+    --line: rgba(255,255,255,.08);
+    --line-2: rgba(255,255,255,.15);
+    --txt: #e9eef7;
+    --dim: #93a1b8;
+    --dimmer: #6b7a92;
+    --accent: #3b82f6;
+    --accent-l: #6ea8ff;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  body {
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+    color: var(--txt); -webkit-user-select: none; user-select: none; cursor: crosshair;
+  }
+  #stage { display: block; width: 100vw; height: 100vh; }
+
+  /* ---------- 顶栏 ---------- */
+  #top {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px;
+    font-size: 12px; color: var(--dim); pointer-events: none;
+  }
+  /* 状态条整体做成一块深色"工具条"，而不是撒在画面上：
+     背后的屏幕可能是白底页面，散排的文字会直接看不见。 */
+  #top .group {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 11px 6px 13px; border-radius: 12px;
+    background: rgba(9,13,19,.87); border: 1px solid rgba(255,255,255,.1);
+    box-shadow: 0 10px 28px rgba(0,0,0,.46);
+    backdrop-filter: blur(10px);
+    max-width: calc(100vw - 110px); overflow: hidden;
+  }
+  #top .brand {
+    display: flex; align-items: center; gap: 7px; flex: 0 0 auto;
+    font-size: 12px; font-weight: 600; color: #d7e0ee; margin-right: 4px;
+  }
+  #top .brand .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 8px rgba(59,130,246,.9);
+  }
+  .pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--line-2); background: rgba(255,255,255,.055);
+    color: #a9b6ca; transition: color .16s, border-color .16s, background .16s;
+  }
+  .pill.hot { color: var(--accent-l); border-color: rgba(110,168,255,.5); background: rgba(110,168,255,.1); }
+  .pill.on { color: #ffc76a; border-color: rgba(251,191,36,.55); background: rgba(251,191,36,.1); }
+  .pill.clickable { pointer-events: auto; cursor: pointer; }
+  .pill.clickable:hover { border-color: rgba(255,255,255,.4); color: #e9eef7; }
+  .spacer { flex: 1; }
+
+  .iconbtn {
+    pointer-events: auto; width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--line-2); background: rgba(20,26,35,.82);
+    color: #a9b6ca; cursor: pointer; font: inherit; font-size: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .14s, color .14s, border-color .14s;
+  }
+  .iconbtn:hover { background: rgba(40,50,66,.95); color: #e9eef7; }
+  .iconbtn.close:hover { background: #e5484d; border-color: #e5484d; color: #fff; }
+  .iconbtn.active { border-color: rgba(110,168,255,.6); color: var(--accent-l); }
+
+  /* ---------- 未识别时的引导 ---------- */
+  #idle {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: none; flex-direction: column; align-items: center; gap: 9px;
+    padding: 13px 20px 14px; border-radius: 14px;
+    background: rgba(14,18,25,.86); border: 1px solid var(--line);
+    box-shadow: 0 16px 44px rgba(0,0,0,.6);
+    backdrop-filter: blur(8px); pointer-events: none;
+  }
+  #idle.show { display: flex; animation: rise .3s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+  #idle .i1 { font-size: 12.5px; color: #cfdae9; }
+  #idle .i1 b { color: var(--accent-l); font-weight: 600; }
+  #idle .i2 { display: flex; gap: 14px; font-size: 10.5px; color: var(--dimmer); }
+  #idle .i2 span { display: flex; align-items: center; gap: 5px; }
+
+  /* ---------- 结果条 ---------- */
+  #bar {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    width: min(920px, calc(100vw - 32px));
+    background: linear-gradient(180deg, rgba(24,31,42,.98), rgba(18,24,33,.98));
+    border: 1px solid var(--line-2);
+    border-radius: 16px; padding: 14px 16px 12px; display: none;
+    box-shadow: 0 22px 60px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  #bar.show { display: block; animation: rise .26s ease-out; }
+  .bhead { display: flex; align-items: flex-start; gap: 10px; }
+  .badge {
+    flex: 0 0 auto; font-size: 11px; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid currentColor; white-space: nowrap; margin-top: 1px;
+    background: rgba(255,255,255,.04);
+  }
+  .good { color: var(--ok); } .warn { color: var(--warn); }
+  .bad { color: var(--bad); } .info { color: var(--accent-l); }
+  #code {
+    flex: 1; min-width: 0;
+    font-family: Consolas, "Cascadia Mono", monospace; font-size: 12.5px;
+    line-height: 1.55; word-break: break-all; max-height: 56px; overflow: auto;
+    color: #eaf0fb; -webkit-user-select: text; user-select: text;
+  }
+  .barx {
+    flex: 0 0 auto; width: 22px; height: 22px; padding: 0; margin-top: -2px;
+    border-radius: 6px; border: 1px solid transparent; background: transparent;
+    color: #63718a; font-size: 11px; line-height: 1;
+  }
+  .barx:hover { background: rgba(255,255,255,.1); border-color: var(--line-2); color: #dfe6f2; }
+  #tip { margin-top: 10px; font-size: 12px; line-height: 1.65; color: #93a1b8; max-width: 82ch; }
+  #tip b { color: #d3dded; font-weight: 600; }
+  /* 原理说明默认只露两行：它是"为什么"，不是"怎么做"，不该把结果条撑到半屏 */
+  #tip .why {
+    margin-top: 5px; color: #8494ac;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #tip .steps {
+    margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 7px 22px;
+  }
+  #tip .steps div {
+    display: flex; gap: 8px; align-items: flex-start;
+    font-size: 11.5px; line-height: 1.6; color: #8c9cb4;
+  }
+  #tip .steps i {
+    flex: 0 0 auto; width: 16px; height: 16px; margin-top: 1px; border-radius: 50%;
+    background: rgba(59,130,246,.16); color: #7fb0ff; font-style: normal;
+    font-size: 9.5px; line-height: 16px; text-align: center; font-weight: 600;
+  }
+
+  .bfoot {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line);
+  }
+  #meta {
+    flex: 1; min-width: 0; font-size: 10px; color: #55637a;
+    font-family: Consolas, monospace; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis;
+  }
+  .acts { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12px; padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--line-2); background: rgba(255,255,255,.07);
+    color: #dfe6f2; cursor: pointer; white-space: nowrap;
+    transition: background .14s, border-color .14s, filter .14s, transform .1s;
+  }
+  button:hover { background: rgba(255,255,255,.14); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-color: transparent; color: #fff; font-weight: 600;
+    box-shadow: 0 6px 18px rgba(37,99,235,.35);
+  }
+  button.primary:hover { filter: brightness(1.08); }
+
+  /* ---------- 帮助浮层 ---------- */
+  #help {
+    position: fixed; top: 58px; right: 12px; width: 322px;
+    display: none; padding: 14px 16px 15px;
+    background: rgba(20,26,35,.98); border: 1px solid var(--line-2);
+    border-radius: 12px; box-shadow: 0 20px 54px rgba(0,0,0,.72);
+    z-index: 25;
+  }
+  #help.show { display: block; }
+  #help h4 { margin: 0 0 9px; font-size: 11px; color: var(--dimmer); font-weight: 600; letter-spacing: .6px; }
+  #help h4:not(:first-child) { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  #help .kv { display: flex; align-items: baseline; gap: 9px; margin-bottom: 6px; font-size: 11.5px; color: var(--dim); }
+  #help .kv kbd { flex: 0 0 auto; min-width: 40px; text-align: center; }
+  #help p { margin: 0; font-size: 11px; line-height: 1.65; color: var(--dimmer); }
+
+  kbd {
+    font-family: Consolas, monospace; font-size: 10px; background: rgba(255,255,255,.08);
+    border: 1px solid var(--line-2); border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 5px; color: #b8c4d6;
+  }
+
+  /* ---------- 错误 ---------- */
+  #err {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,11,15,.96);
+  }
+  #err.show { display: flex; }
+  #err div {
+    max-width: 560px; padding: 24px 26px; border-radius: 14px;
+    border: 1px solid rgba(248,113,113,.35); background: #171d27;
+    box-shadow: 0 24px 70px rgba(0,0,0,.7);
+  }
+  #err h2 { margin: 0 0 9px; font-size: 15px; color: #ff9b9b; }
+  #err p { margin: 0; font-size: 12.5px; line-height: 1.75; color: #9aa6ba; }
+
+  /* ---------- 询问卡 ---------- */
+  #ask {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(5,8,12,.74); backdrop-filter: blur(3px);
+    pointer-events: auto; z-index: 30;
+  }
+  #ask.show { display: flex; }
+  #ask .card {
+    width: min(580px, calc(100vw - 48px));
+    background: #161c26; border: 1px solid var(--line-2);
+    border-radius: 16px; padding: 20px 22px 18px; cursor: default;
+    box-shadow: 0 30px 80px rgba(0,0,0,.78);
+    animation: pop .22s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes pop { from { opacity: 0; transform: scale(.965) translateY(8px); } }
+  #ask h3 { margin: 0 0 7px; font-size: 15.5px; color: #eef3fa; font-weight: 600; }
+  #ask .sub { margin: 0 0 15px; font-size: 12px; line-height: 1.7; color: #8d9bb2; }
+  #ask .sub b { color: #cfdae9; font-weight: 600; }
+
+  #ask .opt {
+    display: flex; gap: 11px; align-items: flex-start;
+    padding: 12px 13px; margin-bottom: 9px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.09); border-radius: 11px;
+    background: rgba(255,255,255,.028);
+    transition: border-color .15s, background .15s;
+  }
+  #ask .opt:hover { border-color: rgba(110,168,255,.42); background: rgba(110,168,255,.05); }
+  #ask .opt:has(input:checked) {
+    border-color: rgba(59,130,246,.72); background: rgba(59,130,246,.1);
+    box-shadow: 0 0 0 1px rgba(59,130,246,.28) inset;
+  }
+  #ask .opt input { display: none; }
+  #ask .tick {
+    flex: 0 0 auto; width: 16px; height: 16px; margin-top: 2px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,.28); position: relative;
+    transition: border-color .15s, background .15s;
+  }
+  #ask .opt:has(input:checked) .tick { border-color: #3b82f6; background: #3b82f6; }
+  #ask .opt:has(input:checked) .tick::after {
+    content: ""; position: absolute; left: 4.5px; top: 1.5px;
+    width: 4px; height: 8px; border: solid #fff; border-width: 0 1.8px 1.8px 0;
+    transform: rotate(42deg);
+  }
+  #ask .opt b { display: block; font-size: 12.8px; color: #e4ebf6; font-weight: 600; margin-bottom: 4px; }
+  #ask .opt em { font-style: normal; font-size: 11.5px; line-height: 1.65; color: #8595ad; }
+  #ask .opt em b { display: inline; font-size: inherit; margin: 0; color: #b9c6d8; }
+
+  #ask .adv {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin: 14px 0 2px; padding-top: 13px; border-top: 1px solid var(--line);
+    font-size: 11.5px; color: #8595ad;
+  }
+  #ask .adv label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  #ask .adv input[type=checkbox] { accent-color: #3b82f6; margin: 0; width: 13px; height: 13px; }
+  #ask select {
+    font: inherit; font-size: 11.5px; padding: 5px 8px; border-radius: 7px;
+    border: 1px solid var(--line-2); background: #1e2632; color: #dfe6f2; cursor: pointer;
+  }
+  #ask .foot { display: flex; flex-direction: column; gap: 11px; margin-top: 15px; }
+  #ask .warnline {
+    font-size: 10.8px; color: #728099; line-height: 1.55;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #ask .warnline::before {
+    content: ""; width: 3px; align-self: stretch; min-height: 14px; border-radius: 2px;
+    background: rgba(251,191,36,.5); flex: 0 0 3px;
+  }
+  #ask .footrow { display: flex; align-items: center; gap: 9px; }
+  #ask .hintKey { font-size: 10px; color: #5d6b82; margin-right: auto; }
+
+  /* ---------- 轻提示 ---------- */
+  #toast {
+    position: fixed; left: 50%; top: 56px; transform: translateX(-50%) translateY(-10px);
+    max-width: min(700px, calc(100vw - 40px));
+    padding: 11px 16px 11px 14px; border-radius: 10px; font-size: 12px; line-height: 1.65;
+    background: rgba(22,28,38,.98); border: 1px solid var(--line-2);
+    color: #dfe6f2; box-shadow: 0 16px 44px rgba(0,0,0,.6);
+    opacity: 0; pointer-events: none; z-index: 40;
+    display: flex; gap: 9px; align-items: flex-start;
+    transition: opacity .18s, transform .18s;
+  }
+  #toast::before {
+    content: "i"; flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(110,168,255,.2); color: #7fb0ff;
+    font-size: 10.5px; line-height: 16px; text-align: center;
+    font-weight: 700; font-style: normal; margin-top: 1px;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.warn { border-color: rgba(251,191,36,.45); color: #ffd894; background: rgba(42,34,18,.98); }
+  #toast.warn::before { content: "!"; background: rgba(251,191,36,.22); color: #fbbf24; }
+  #toast.bad { border-color: rgba(248,113,113,.45); color: #ffb4b4; background: rgba(44,22,24,.98); }
+  #toast.bad::before { content: "×"; background: rgba(248,113,113,.22); color: #f87171; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="top">
+  <div class="group">
+    <span class="brand"><span class="dot"></span>框选扫码</span>
+    <span class="pill" id="modePill">冻结</span>
+    <span class="pill" id="statPill">等待画面</span>
+    <span class="pill" id="wxPill">微信检测中</span>
+    <span class="pill clickable" id="proxyPill" title="点击可立即关闭移动端环境">代理 关</span>
+  </div>
+  <span class="spacer"></span>
+  <button class="iconbtn" id="btnHelp" title="快捷键说明">?</button>
+  <button class="iconbtn close" id="btnClose" title="退出框选（Esc）">✕</button>
+</div>
+
+<div id="idle" class="show">
+  <div class="i1">拖动鼠标，把二维码框进框内</div>
+  <div class="i2">
+    <span><kbd>空格</kbd>连续扫描</span>
+    <span><kbd>R</kbd>重置</span>
+    <span><kbd>C</kbd>复制</span>
+    <span><kbd>Esc</kbd>退出</span>
+  </div>
+</div>
+
+<div id="bar">
+  <div class="bhead">
+    <span class="badge info" id="badge">等待识别</span>
+    <div id="code"></div>
+    <button class="barx" id="btnBarClose" title="收起结果，重新框选">✕</button>
+  </div>
+  <div id="tip"></div>
+  <div class="bfoot">
+    <div id="meta"></div>
+    <div class="acts">
+      <button id="btnMobile" style="display:none">手机环境打开</button>
+      <button id="btnOpen" style="display:none">打开</button>
+      <button class="primary" id="btnCopy">复制</button>
+    </div>
+  </div>
+</div>
+
+<div id="help">
+  <h4>快捷键</h4>
+  <div class="kv"><kbd>空格</kbd><span>冻结 / 连续扫描切换</span></div>
+  <div class="kv"><kbd>C</kbd><span>复制识别到的内容</span></div>
+  <div class="kv"><kbd>R</kbd><span>重置选框位置</span></div>
+  <div class="kv"><kbd>P</kbd><span>暂停 / 恢复解码</span></div>
+  <div class="kv"><kbd>Esc</kbd><span>退出框选</span></div>
+  <h4>关于「手机环境」</h4>
+  <p>正常扫码不会启动代理。只有链接需要手机环境时，点结果条里的主按钮并确认，才会临时启动本地代理；到期、手动停止或关闭软件时自动还原系统代理。</p>
+  <p>代理范围默认是<b>只接管这条链接所在的站</b>：登录流程跳到别的域时，代理会在返回跳转的那一刻把这个域名加进来，
+  所以既不用你手工维护清单，也不会把整机流量都解密。设置 →「代理范围」可改成全部站点；选「全局」模式时只能全量。</p>
+</div>
+
+<div id="ask">
+  <div class="card">
+    <h3>要用「手机环境」打开这条链接吗？</h3>
+    <p class="sub" id="askSub"></p>
+
+    <label class="opt">
+      <input type="radio" name="pmode" value="proxy" checked />
+      <span class="tick"></span>
+      <span>
+        <b>模拟手机微信（推荐）</b>
+        <em>临时启用本地代理，把微信内置浏览器的 UA 换成 Android 微信，再把链接复制到剪贴板并唤起微信。结束后自动还原系统代理。</em>
+      </span>
+    </label>
+
+    <label class="opt">
+      <input type="radio" name="pmode" value="direct" />
+      <span class="tick"></span>
+      <span>
+        <b>不模拟，按原方式</b>
+        <em>只复制链接并唤起微信。PC 版页面可能显示「页面不存在」或要求手机扫码。</em>
+      </span>
+    </label>
+
+    <div class="adv">
+      <label><input type="checkbox" id="askGlobal" /> 兼容模式（全局代理）</label>
+      <select id="askTtl">
+        <option value="10">10 秒后自动关闭</option>
+        <option value="60">1 分钟后自动关闭</option>
+        <option value="180" selected>3 分钟后自动关闭</option>
+        <option value="300">5 分钟后自动关闭</option>
+        <option value="0">不自动关闭（手动停）</option>
+      </select>
+      <label><input type="checkbox" id="askRemember" /> 本次运行记住</label>
+    </div>
+
+    <div class="foot">
+      <span class="warnline">启用期间会临时修改系统代理：<b>默认只接管这条链接所在的站</b>（其余直连，
+        跨站跳转的域名会在跳转时自动加入）；设置里选「全部站点」则所有 HTTPS 都经代理。
+        停止时 100% 还原。</span>
+      <div class="footrow">
+        <span class="hintKey">Enter 确定 · Esc 取消</span>
+        <button id="askCancel">取消</button>
+        <button class="primary" id="askOk">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="err"><div><h2>屏幕捕获失败</h2><p id="errMsg"></p></div></div>
+
+<script src="./vendor/jsQR.js"></script>
+<script src="./classify.js"></script>
+<script src="./sound.js"></script>
+<script src="./overlay.js"></script>
+</body>
+</html>

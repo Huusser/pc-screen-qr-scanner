@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>测试二维码</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fff; overflow: hidden; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="./vendor/qrcodegen.js"></script>
+<script>
+(function () {
+  // 支持 ?t=<urlencoded> 指定内容，便于验证不同码型；
+  // 默认用 qrconnect（网站应用扫码登录），这是最容易被误判为「无解」的一类。
+  // URLSearchParams.get 已完成一次解码，不要再次 decodeURIComponent。
+  var qs = new URLSearchParams(location.search);
+  var text = qs.get("t") || "";
+  if (!text) {
+    text = "https://open.weixin.qq.com/connect/qrconnect?appid=wxd930ea5d5a258f4" +
+      "&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&response_type=code" +
+      "&scope=snsapi_login&state=demo#wechat_redirect";
+  }
+
+  // 低纠错等级换取更少模块数，长链接在屏幕上才不会糊成一团
+  var qr = qrcode(0, "L");
+  qr.addData(text);
+  qr.make();
+
+  var cv = document.getElementById("c");
+  var dpr = window.devicePixelRatio || 1;
+  var n = qr.getModuleCount();
+  var quiet = 4;
+
+  // 每个模块至少 5 物理像素，保证截屏后能被解码
+  var ms = Math.max(5, Math.floor((Math.min(window.innerWidth, window.innerHeight) * 0.86) / (n + quiet * 2)));
+  var cssSize = (n + quiet * 2) * ms;
+
+  cv.style.width = cssSize + "px";
+  cv.style.height = cssSize + "px";
+  cv.width = Math.round(cssSize * dpr);
+  cv.height = Math.round(cssSize * dpr);
+
+  var g = cv.getContext("2d");
+  g.scale(dpr, dpr);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, cssSize, cssSize);
+  g.fillStyle = "#000";
+  for (var y = 0; y < n; y++) {
+    for (var x = 0; x < n; x++) {
+      if (qr.isDark(y, x)) {
+        g.fillRect((x + quiet) * ms, (y + quiet) * ms, ms, ms);
+      }
+    }
+  }
+})();
+</script>
+</body>
+</html>

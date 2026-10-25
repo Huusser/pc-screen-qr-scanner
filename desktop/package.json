@@ -1,0 +1,109 @@
+{
+  "name": "pc-screen-qr-scanner",
+  "version": "0.4.0",
+  "productName": "屏幕扫码",
+  "description": "PC 屏幕框选扫码，并把链接交给微信打开",
+  "main": "main.js",
+  "author": "QRScan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Huusser/pc-screen-qr-scanner.git"
+  },
+  "homepage": "https://github.com/Huusser/pc-screen-qr-scanner#readme",
+  "bugs": {
+    "url": "https://github.com/Huusser/pc-screen-qr-scanner/issues"
+  },
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "runtime": "node tools/fetch-runtime.js",
+    "prepare:builder": "node tools/prepare-builder.js",
+    "icon": "node tools/make-icon.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis",
+    "dist:x64": "electron-builder --win nsis --x64",
+    "dist:from-pack": "electron-builder --win nsis --prepackaged dist/win-unpacked",
+    "sign:app": "node tools/sign-win.js --target dist/win-unpacked",
+    "sign:installer": "node tools/sign-win.js --target \"dist/ScreenQR-*-x64.exe\"",
+    "sign:dev:app": "node tools/sign-win.js --dev --target dist/win-unpacked",
+    "sign:dev:installer": "node tools/sign-win.js --dev --target \"dist/ScreenQR-*-x64.exe\"",
+    "verify:sign": "node tools/verify-sign.js",
+    "release": "npm run runtime && node tools/prepare-builder.js && npm run pack && npm run sign:app && npm run dist:from-pack && npm run sign:installer",
+    "release:dev": "npm run runtime && node tools/prepare-builder.js && npm run pack && npm run sign:dev:app && npm run dist:from-pack && npm run sign:dev:installer"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.qrscan.desktop",
+    "productName": "屏幕扫码",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "win-helper.ps1",
+      "vendor/python/**"
+    ],
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!tools/**",
+      "!build/**",
+      "!*.log",
+      "!*.log.*",
+      "!**/*.log",
+      "!**/*.log.*",
+      "!selftest.json",
+      "!uitest.json",
+      "!uitest-*.png",
+      "!wx-test/**",
+      "!ui-preview/**",
+      "!probe-login.js",
+      "!settings.json",
+      "!package-lock.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../proxy",
+        "to": "proxy",
+        "filter": [
+          "**/*",
+          "!certs/**",
+          "!__pycache__/**",
+          "!*.log",
+          "!**/*.html",
+          "!README.md",
+          "!state.json",
+          "!previous.json",
+          "!learned.json",
+          "!stats.json",
+          "!_t_*.py"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "屏幕扫码",
+      "artifactName": "ScreenQR-${version}-${arch}.${ext}",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

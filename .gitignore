@@ -1,0 +1,111 @@
+# ─────────────────────────────────────────────────────────────
+# 屏幕扫码（PC Screen QR Scanner）—— 开源仓库忽略规则
+#
+# 原则：凡是「运行时生成」或「本机特有」的东西都不进仓库。
+# 其中 proxy/certs/ 是**私钥**，一旦提交等于把自己的本地 CA 公开，
+# 别人可以用它为任意 HTTPS 站点签发证书，而装过本 CA 的用户会无条件信任。
+# ─────────────────────────────────────────────────────────────
+
+# ── 依赖 ──────────────────────────────────────────────────
+node_modules/
+package-lock.json.bak
+
+# ── 构建产物 ──────────────────────────────────────────────
+dist/
+*.blockmap
+*.7z
+*.exe
+*.zip
+
+# ── 内置 Python 运行时（npm run runtime 下载，约 22 MB） ────
+desktop/vendor/python/
+
+# ── 代理：证书、私钥（最高危） ────────────────────────────
+proxy/certs/
+# 兜底：任何位置出现私钥/证书包都别提交
+*.key
+*.pfx
+*.p12
+*.snk
+*.pem
+
+# ── 代理：运行日志与状态（含域名与完整 URL） ──────────────
+proxy/*.log
+proxy/state.json
+proxy/previous.json
+proxy/learned.json
+proxy/stats.json
+proxy/*.tmp
+
+# ── 代理：本机抓包样本（HTTP 响应正文，含业务数据） ────────
+# ac.html / r1.html / r2.html 是分析 404 时抓下来的响应，不被任何代码引用
+proxy/ac.html
+proxy/r*.html
+
+# ── 桌面端：本机设置与运行时日志 ──────────────────────────
+# 注意：timing.sample.log 是日志格式示例，**要提交**（见文件末尾说明）
+desktop/settings.json
+desktop/boot.log
+desktop/crash.log
+desktop/timing.log
+desktop/selftest.json
+desktop/envcheck.json
+desktop/uitest.json
+desktop/uitest-*.png
+
+# 截图工具（ui-preview）的运行日志；同目录的 png 是文档配图，要提交
+desktop/ui-preview/app/*.log
+desktop/wx-test/
+desktop/test-wx-result.html
+
+# 登录页探针：本地调试用（会打开任意 URL 并抓取页面/网络/截图），
+# 与产品功能无关，不随仓库分发。需要时本地保留即可。
+desktop/probe-login.js
+desktop/.probe-profile/
+desktop/.reconfirm-profile/
+
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# ── 会话/工具痕迹（含本机绝对路径与内部记录） ─────────────
+.workbuddy/
+
+# ── 编辑器与系统 ──────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.Thumbs.db
+*.swp
+
+# ── 临时文件 ──────────────────────────────────────────────
+*.tmp
+*.bak
+*~
+
+# ── 本地开发记录（仅留在本机，不进开源仓库）────────────────
+# 这些是开发过程中的排查/测试/性能记录，含实测日志、缺陷清单与内部推理，
+# 不适合公开发布；保留在本地作为工程档案。发布前已从仓库移除，
+# 这里加规则是为了防止以后 git add -A 时又被误提交。
+/测试操作手册.md
+/timing-log-*.md
+/端到端耗时-*.md
+/搜索跳转延迟-*.md
+/前台校验失败-*.md
+/扫码登录PC端404-*.md
+/扫码后直达微信-*.md
+/搜一搜直达-*.md
+/微信PC端扫码能力内嵌-*.md
+/代码复查-*.md
+/兼容性与适配评估-*.md
+
+# ─────────────────────────────────────────────────────────────
+# 注意：下面这些**必须提交**，不要加进来
+#   desktop/build/icon.ico, desktop/build/icon.png   —— 打包要用的图标
+#   proxy/_t_*.py                                    —— 证书/代理的回归测试
+#   desktop/timing.sample.log                         —— 日志格式示例
+# ─────────────────────────────────────────────────────────────

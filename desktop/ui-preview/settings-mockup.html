@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>设置面板设计稿</title>
+<style>
+  /* ================= 设计稿外壳 ================= */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: #eef1f6;
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+    color: #2b3446;
+    -webkit-user-select: none;
+  }
+  .board { padding: 30px 34px 34px; display: inline-block; }
+  .board + .board { border-top: 1px dashed #d3dae6; }
+  .bhead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+  .bhead h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .2px; }
+  .bhead h2 em { font-style: normal; color: #3b82f6; }
+  .bhead .sub { font-size: 12px; color: #7b8798; }
+  .brow { display: flex; align-items: flex-start; gap: 26px; }
+  .bcol { display: flex; flex-direction: column; gap: 9px; }
+  .bcap { font-size: 11.5px; color: #6b7789; letter-spacing: .3px; padding-left: 2px; }
+  .bcap b { color: #2b3446; font-weight: 600; }
+
+  /* ================= 窗口（复用 launcher.html 的真实视觉） ================= */
+  .win {
+    --bg: #0c1017; --panel: #141a23; --panel-2: #18202c;
+    --line: rgba(255,255,255,.075); --line-2: rgba(255,255,255,.14);
+    --txt: #e9eef7; --dim: #8a97ac; --dimmer: #5f6d82;
+    --accent: #3b82f6; --accent-2: #2563eb;
+    --ok: #34d399; --warn: #fbbf24; --bad: #f87171;
+    position: relative;
+    width: 442px; height: 500px;
+    background: var(--bg); color: var(--txt);
+    border-radius: 11px; overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 18px 46px rgba(23,38,66,.28), 0 3px 10px rgba(23,38,66,.16);
+  }
+  .win * { box-sizing: border-box; }
+
+  #titlebar {
+    height: 40px; flex: 0 0 40px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 6px 0 16px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #121822, #0c1017);
+  }
+  #titlebar .logo {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.16), 0 0 10px rgba(59,130,246,.7);
+    flex: 0 0 auto;
+  }
+  #titlebar .name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+  #titlebar .ver {
+    font-size: 10px; color: var(--dimmer); border: 1px solid var(--line-2);
+    border-radius: 5px; padding: 0 5px; line-height: 15px; margin-left: 2px;
+  }
+  #titlebar .spacer { flex: 1; }
+  .wbtn {
+    width: 30px; height: 26px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--dim); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .14s, color .14s;
+  }
+  .wbtn.hover { background: rgba(255,255,255,.09); color: var(--txt); }
+  .wbtn.on { background: rgba(59,130,246,.2); color: #cfe2ff; box-shadow: inset 0 0 0 1px rgba(59,130,246,.4); }
+  .wbtn.close.hover { background: #e5484d; color: #fff; }
+
+  /* --- 主界面 --- */
+  main { flex: 1; padding: 18px 20px 14px; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+  .hero { display: flex; gap: 13px; align-items: flex-start; }
+  .hero .glyph {
+    width: 46px; height: 46px; flex: 0 0 46px; border-radius: 13px;
+    background: linear-gradient(150deg, #2c6ef2, #1a45b8);
+    box-shadow: 0 8px 22px rgba(37,99,235,.38), inset 0 1px 0 rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+  }
+  .hero h1 { margin: 1px 0 5px; font-size: 16px; font-weight: 600; letter-spacing: .2px; }
+  .hero p { margin: 0; font-size: 11.8px; line-height: 1.65; color: var(--dim); }
+  #btnStart {
+    width: 100%; height: 58px; border: 0; border-radius: 13px; cursor: pointer;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff; font: inherit;
+    display: flex; align-items: center; gap: 11px; padding: 0 16px;
+    box-shadow: 0 10px 26px rgba(37,99,235,.34), inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  #btnStart .txt { font-size: 14.5px; font-weight: 600; letter-spacing: .3px; }
+  #btnStart .grow { flex: 1; }
+  #btnStart kbd {
+    font-family: Consolas, monospace; font-size: 10.5px; font-weight: 400;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.28);
+    border-radius: 6px; padding: 3px 7px; letter-spacing: .4px;
+  }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px 11px; min-width: 0; }
+  .card .label { font-size: 10.5px; color: var(--dimmer); letter-spacing: .5px; margin-bottom: 7px; }
+  .card .val { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+  .card .sub { margin-top: 4px; font-size: 10.5px; color: var(--dimmer); line-height: 1.5; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--dimmer); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(52,211,153,.65); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 8px rgba(251,191,36,.6); }
+  .dot.bad { background: var(--bad); box-shadow: 0 0 8px rgba(248,113,113,.6); }
+  .dot.live { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .steps { flex: 0 0 auto; }
+  .sec { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--dimmer); letter-spacing: .6px; margin-bottom: 9px; }
+  .sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .step { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 8px; }
+  .step i {
+    flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%;
+    background: rgba(59,130,246,.13); color: #7fb0ff;
+    font-style: normal; font-size: 10px; line-height: 17px; text-align: center;
+    font-weight: 600; margin-top: .5px;
+  }
+  .step span { font-size: 11.5px; line-height: 1.6; color: var(--dim); }
+  .step span b { color: #cfdae9; font-weight: 600; }
+  footer { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding-top: 11px; border-top: 1px solid var(--line); }
+  footer .keys { flex: 1; font-size: 10.5px; color: var(--dimmer); line-height: 1.7; }
+  footer .keys b { color: var(--dim); font-weight: 400; }
+  kbd {
+    font-family: Consolas, monospace; font-size: 9.5px; background: rgba(255,255,255,.07);
+    border: 1px solid var(--line-2); border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 4px; color: #b8c4d6;
+  }
+  #btnQuit {
+    font: inherit; font-size: 11.5px; padding: 6px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line-2); background: transparent; color: var(--dim);
+  }
+
+  /* ================= 设置面板 ================= */
+  .back {
+    width: 26px; height: 26px; flex: 0 0 26px; margin-left: -8px;
+    border: 0; border-radius: 7px; background: transparent; color: var(--txt);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .back:hover { background: rgba(255,255,255,.08); }
+  .tb-title { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+
+  .tabs {
+    flex: 0 0 48px; display: flex; align-items: center; gap: 5px;
+    padding: 0 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,.018), transparent);
+  }
+  .tab {
+    flex: 1; height: 34px; border: 0; border-radius: 8px; background: transparent;
+    color: var(--dimmer); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font: inherit; font-size: 10.8px; transition: background .14s, color .14s;
+  }
+  .tab svg { width: 14px; height: 14px; flex: 0 0 14px; }
+  .tab.on { background: rgba(59,130,246,.16); color: #bcd6ff; box-shadow: inset 0 0 0 1px rgba(59,130,246,.34); }
+  .tab.on svg { color: #7fb0ff; }
+
+  .body { flex: 1; padding: 12px 16px 0; overflow: hidden; position: relative; }
+  .body::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+    background: linear-gradient(180deg, transparent, var(--bg)); pointer-events: none;
+  }
+  .grp { display: flex; align-items: center; gap: 8px; margin: 11px 0 1px; font-size: 10px; color: var(--dimmer); letter-spacing: .8px; }
+  .grp:first-child { margin-top: 0; }
+  .grp i { flex: 1; height: 1px; background: var(--line); }
+  .strow { display: flex; align-items: center; gap: 10px; min-height: 39px; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .strow:last-child { border-bottom: 0; }
+  .stl { flex: 1; min-width: 0; font-size: 11.8px; color: #dbe3ef; line-height: 1.3; }
+  .stl em { display: block; font-style: normal; font-size: 9.8px; color: var(--dimmer); margin-top: 2px; line-height: 1.4; }
+
+  .seg { display: inline-flex; flex: 0 0 auto; padding: 2px; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 7px; }
+  .seg button {
+    border: 0; background: transparent; color: var(--dim); font: inherit;
+    font-size: 10.5px; line-height: 1; padding: 5px 9px; border-radius: 5px; cursor: pointer;
+  }
+  .seg button.on { background: rgba(59,130,246,.22); color: #b3cfff; box-shadow: inset 0 0 0 1px rgba(59,130,246,.42); }
+
+  .sw { position: relative; width: 32px; height: 18px; flex: 0 0 32px; border-radius: 9px; background: rgba(255,255,255,.13); }
+  .sw i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; opacity: .72; }
+  .sw.on { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 0 10px rgba(37,99,235,.4); }
+  .sw.on i { left: 16px; opacity: 1; }
+
+  .kbdbtn {
+    font-family: Consolas, monospace; font-size: 10px; color: #cfdcef;
+    background: rgba(255,255,255,.06); border: 1px solid var(--line-2); border-bottom-width: 2px;
+    border-radius: 6px; padding: 4px 7px; cursor: pointer; letter-spacing: .3px;
+  }
+  .kbdbtn:hover { background: rgba(255,255,255,.1); }
+
+  .pstate {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; margin-bottom: 1px; border-radius: 9px;
+    border: 1px solid rgba(251,191,36,.28);
+    background: linear-gradient(180deg, rgba(251,191,36,.1), rgba(251,191,36,.035));
+    font-size: 11px; color: #ffd68a;
+  }
+  .pstate .mono { font-family: Consolas, monospace; font-size: 10.5px; color: #c9a866; margin-left: auto; }
+  .pstate .mini {
+    font: inherit; font-size: 10px; padding: 4px 8px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(251,191,36,.4); background: rgba(251,191,36,.12); color: #ffd28a;
+  }
+
+  .modecard { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+  .modecard .mh { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--txt); }
+  .modecard .mh .rd { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-2); flex: 0 0 12px; }
+  .modecard.on { border-color: rgba(59,130,246,.5); background: linear-gradient(180deg, rgba(59,130,246,.1), rgba(59,130,246,.03)); }
+  .modecard.on .mh .rd { border-color: #3b82f6; background: radial-gradient(circle, #3b82f6 45%, transparent 47%); box-shadow: 0 0 0 3px rgba(59,130,246,.16); }
+  .modecard .md { font-size: 9.8px; color: var(--dimmer); line-height: 1.5; margin-top: 3px; padding-left: 18px; }
+
+  .lockchip { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; color: #7c8ba1; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; }
+  .lockchip svg { width: 9px; height: 9px; }
+  .strow.locked { min-height: 34px; }
+  .strow.locked .stl { color: #aab6c8; }
+
+  .danger {
+    width: 100%; margin-top: 7px; height: 30px; border-radius: 8px; cursor: pointer; font: inherit;
+    font-size: 11.2px; color: #ff9b9b;
+    border: 1px solid rgba(229,72,77,.4); background: rgba(229,72,77,.08);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .foot {
+    flex: 0 0 50px; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.014));
+  }
+  .foot .fnote { flex: 1; font-size: 9.8px; color: var(--dimmer); line-height: 1.4; }
+  .btn-ghost { font: inherit; font-size: 11px; padding: 6px 11px; border-radius: 7px; cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--dim); }
+  .btn-prim {
+    font: inherit; font-size: 11.5px; font-weight: 600; padding: 7px 16px; border-radius: 7px; cursor: pointer; border: 0; color: #fff;
+    background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 6px 16px rgba(37,99,235,.34);
+  }
+
+  /* 滑块 */
+  .slider { position: relative; width: 118px; height: 16px; flex: 0 0 118px; }
+  .slider .track { position: absolute; left: 0; right: 0; top: 7px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.09); }
+  .slider .fill { position: absolute; left: 0; top: 7px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #3b82f6, #60a5fa); width: 64%; }
+  .slider .knob { position: absolute; left: 64%; top: 3px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+
+  /* 关于页 */
+  .about-hero { display: flex; gap: 12px; align-items: center; padding: 4px 0 14px; }
+  .about-hero .g { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px; background: linear-gradient(150deg,#2c6ef2,#1a45b8); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 8px 20px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.22); }
+  .about-hero .t1 { font-size: 14px; font-weight: 600; }
+  .about-hero .t2 { font-size: 10.5px; color: var(--dimmer); margin-top: 3px; }
+  .about-hero .chk { margin-left: auto; font: inherit; font-size: 10.5px; padding: 5px 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--line-2); background: rgba(255,255,255,.04); color: var(--dim); }
+  .linkrow { display: flex; align-items: center; gap: 8px; min-height: 38px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 11.8px; color: #dbe3ef; }
+  .linkrow .chev { margin-left: auto; color: var(--dimmer); }
+  .linkrow svg { width: 13px; height: 13px; color: var(--dim); flex: 0 0 13px; }
+  .privacy { margin-top: 12px; font-size: 9.8px; color: var(--dimmer); line-height: 1.6; display: flex; gap: 6px; }
+  .privacy svg { width: 11px; height: 11px; flex: 0 0 11px; margin-top: 2px; color: #4f8f6f; }
+
+  /* 标注圈 */
+  .ring-mark {
+    position: absolute; left: 328px; top: 5px; width: 34px; height: 30px; border-radius: 9px;
+    border: 1.5px dashed rgba(59,130,246,.95);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.14), 0 0 14px rgba(59,130,246,.5);
+    pointer-events: none;
+  }
+
+  /* 注释卡 */
+  .note {
+    width: 336px; background: #fff; border-radius: 12px; padding: 18px 20px 16px;
+    box-shadow: 0 10px 30px rgba(23,38,66,.1), 0 1px 3px rgba(23,38,66,.06);
+  }
+  .ntag {
+    display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: .6px;
+    color: #2563eb; background: #e8f0ff; border-radius: 5px; padding: 3px 7px;
+  }
+  .note h3 { margin: 9px 0 12px; font-size: 14.5px; font-weight: 600; }
+  .note ul { margin: 0; padding: 0; list-style: none; }
+  .note li { position: relative; padding-left: 14px; font-size: 11.6px; line-height: 1.65; color: #55607a; margin-bottom: 8px; }
+  .note li::before { content: ""; position: absolute; left: 2px; top: 7px; width: 4px; height: 4px; border-radius: 50%; background: #b9c6dc; }
+  .note li b { color: #2b3446; font-weight: 600; margin-right: 4px; }
+  .note .nsub { font-size: 10.5px; color: #93a0b4; margin-top: 12px; padding-top: 11px; border-top: 1px solid #edf1f7; }
+  .zoom { margin-top: 9px; background: #0c1017; border-radius: 9px; padding: 11px 12px; display: flex; align-items: center; gap: 8px; }
+  .zoom .lbl { flex: 1; font-size: 10px; color: #5f6d82; letter-spacing: .4px; }
+  .zoom .wbtn { transform: scale(1.25); margin-right: 4px; }
+
+  /* 功能清单表 */
+  .spec { width: 900px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 34px rgba(23,38,66,.12); }
+  .spec table { width: 100%; border-collapse: collapse; }
+  .spec th {
+    text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: .6px; color: #7b8798;
+    background: #f6f8fb; padding: 9px 12px; border-bottom: 1px solid #e6ebf3;
+  }
+  .spec td { padding: 8px 12px; font-size: 11.4px; color: #3f4b60; border-bottom: 1px solid #f1f4f9; vertical-align: middle; }
+  .spec tr:last-child td { border-bottom: 0; }
+  .spec .gcell { font-size: 10.5px; color: #8b97a8; }
+  .spec .name { font-weight: 600; color: #2b3446; }
+  .spec .ctl { font-family: Consolas, monospace; font-size: 10.2px; color: #5b6a83; background: #f4f7fb; border-radius: 4px; padding: 2px 6px; }
+  .spec .def { font-size: 10.5px; color: #2563eb; }
+  .spec .def.off { color: #98a4b6; }
+  .spec .dsc { font-size: 10.8px; color: #6b7789; }
+  .spec .gd { background: #fbfcfe; }
+  .spec .gd td { font-size: 10.5px; font-weight: 600; letter-spacing: .8px; color: #2563eb; padding: 7px 12px; border-bottom: 1px solid #eef2f8; }
+  .legend { display: flex; gap: 18px; margin-top: 12px; font-size: 11px; color: #7b8798; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 7px; height: 7px; border-radius: 2px; background: #3b82f6; display: block; }
+  .legend i.g { background: #b9c6dc; }
+</style>
+</head>
+<body>
+
+<!-- ================= 画板 1：入口 ================= -->
+<div class="board" data-g="1">
+  <div class="bhead">
+    <h2><em>01</em> &nbsp;设置入口 · 加在最小化左边</h2>
+    <span class="sub">不改变窗口尺寸，仅标题栏新增一个 30×26 的按钮</span>
+  </div>
+  <div class="brow">
+    <div class="bcol">
+      <div class="win">
+        <div id="titlebar">
+          <span class="logo"></span>
+          <span class="name">屏幕扫码</span>
+          <span class="ver">v0.3</span>
+          <span class="spacer"></span>
+          <button class="wbtn hover">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            </svg>
+          </button>
+          <button class="wbtn">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="wbtn close">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="ring-mark"></div>
+
+        <main>
+          <div class="hero">
+            <div class="glyph">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/>
+                <rect x="8" y="8" width="8" height="8" rx="1.2"/>
+              </svg>
+            </div>
+            <div>
+              <h1>框选屏幕上的二维码</h1>
+              <p>框住屏幕上任意二维码即可读出内容；需要微信授权时可切到手机环境。</p>
+            </div>
+          </div>
+
+          <button id="btnStart">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
+            <span class="txt">开始框选</span>
+            <span class="grow"></span>
+            <kbd>Alt+Shift+Q</kbd>
+          </button>
+
+          <div class="cards">
+            <div class="card">
+              <div class="label">微信环境</div>
+              <div class="val"><span class="dot ok"></span><span>微信 4.x · 可用</span></div>
+              <div class="sub">支持免扫码授权登录</div>
+            </div>
+            <div class="card">
+              <div class="label">移动端环境</div>
+              <div class="val"><span class="dot"></span><span>未启用</span></div>
+              <div class="sub">按需启动，平时不占后台</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="sec">使用流程</div>
+            <div class="step"><i>1</i><span>在浏览器里打开带二维码的页面，让二维码完整显示</span></div>
+            <div class="step"><i>2</i><span>按 <b>Alt+Shift+Q</b> 调出取景框，套住二维码；码会刷新时按 <b>空格</b> 切连续扫描</span></div>
+            <div class="step"><i>3</i><span>按底部结果条的结论操作；提示需要手机环境时，点主按钮并确认</span></div>
+          </div>
+
+          <footer>
+            <div class="keys"><b>框选后：</b><kbd>空格</kbd> 连续 <kbd>C</kbd> 复制 <kbd>R</kbd> 重置 <kbd>Esc</kbd> 退出</div>
+            <button id="btnQuit">退出程序</button>
+          </footer>
+        </main>
+      </div>
+      <div class="bcap"><b>主窗口</b> · 442×500　齿轮按钮与左右邻居同尺寸，鼠标移上去才亮</div>
+    </div>
+
+    <div class="note">
+      <div class="ntag">新增</div>
+      <h3>设置入口放这里</h3>
+      <ul>
+        <li><b>位置</b>标题栏最右侧，紧贴最小化按钮左边，符合 Windows 从左到右「功能 → 最小化 → 关闭」的阅读习惯</li>
+        <li><b>尺寸</b>30×26，与最小化和关闭完全一致；图标 15px 细线，视觉重量刚好不压过主按钮</li>
+        <li><b>悬停</b>浅白底 9% + 图标提亮，与另外两个窗口按钮同一套反馈</li>
+        <li><b>点击</b>内容区整体滑入设置面板，标题栏变成「← 设置」，齿轮保持高亮表示当前位置</li>
+        <li><b>返回</b>点返回箭头或再点一次齿轮，回到主界面，扫码状态、代理状态一律保留</li>
+      </ul>
+      <div class="nsub">标题栏按钮实际比例</div>
+      <div class="zoom">
+        <span class="lbl">齿轮 · 最小化 · 关闭</span>
+        <button class="wbtn on">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          </svg>
+        </button>
+        <button class="wbtn">
+          <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button class="wbtn">
+          <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 画板 2：扫码页 + 代理页 ================= -->
+<div class="board" data-g="2">
+  <div class="bhead">
+    <h2><em>02</em> &nbsp;设置面板 · 扫码 &amp; 移动端环境</h2>
+    <span class="sub">四个分页：扫码 / 移动端环境 / 外观 / 关于，标签一行放得下，不用二级菜单</span>
+  </div>
+  <div class="brow">
+
+    <!-- 扫码页 -->
+    <div class="bcol">
+      <div class="win">
+        <div id="titlebar">
+          <button class="back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+          </button>
+          <span class="tb-title">设置</span>
+          <span class="spacer"></span>
+          <button class="wbtn on">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            </svg>
+          </button>
+          <button class="wbtn">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="wbtn close">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>
+            扫码
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/></svg>
+            移动端
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6"/></svg>
+            外观
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor" stroke="none"/></svg>
+            关于
+          </button>
+        </div>
+
+        <div class="body">
+          <div class="grp"><span>框选</span><i></i></div>
+          <div class="strow">
+            <div class="stl">全局快捷键<em>在任何窗口按下都能开始框选</em></div>
+            <button class="kbdbtn">Alt+Shift+Q</button>
+          </div>
+          <div class="strow">
+            <div class="stl">扫描方式<em>码会刷新时用连续模式</em></div>
+            <div class="seg"><button class="on">单次</button><button>连续</button></div>
+          </div>
+          <div class="strow">
+            <div class="stl">识别后自动复制到剪贴板</div>
+            <span class="sw on"><i></i></span>
+          </div>
+          <div class="strow">
+            <div class="stl">记住上次的框选位置<em>下次框选从同一块区域开始</em></div>
+            <span class="sw on"><i></i></span>
+          </div>
+          <div class="strow">
+            <div class="stl">扫描时隐藏主窗口<em>取景框独占屏幕，少一点干扰</em></div>
+            <span class="sw on"><i></i></span>
+          </div>
+
+          <div class="grp"><span>判断与提示</span><i></i></div>
+          <div class="strow">
+            <div class="stl">自动判断是否需要手机环境<em>关闭后一律只读码，不弹代理询问</em></div>
+            <span class="sw on"><i></i></span>
+          </div>
+          <div class="strow">
+            <div class="stl">结果条停留时长</div>
+            <div class="seg"><button>短</button><button class="on">中</button><button>长</button></div>
+          </div>
+          <div class="strow">
+            <div class="stl">识别成功时提示音</div>
+            <span class="sw"><i></i></span>
+          </div>
+        </div>
+
+        <div class="foot">
+          <span class="fnote">改动立即生效，无需重启</span>
+          <button class="btn-ghost">恢复默认</button>
+          <button class="btn-prim">完成</button>
+        </div>
+      </div>
+      <div class="bcap"><b>① 扫码</b>　日常最常调的三项放最上面</div>
+    </div>
+
+    <!-- 代理页 -->
+    <div class="bcol">
+      <div class="win">
+        <div id="titlebar">
+          <button class="back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+          </button>
+          <span class="tb-title">设置</span>
+          <span class="spacer"></span>
+          <button class="wbtn on">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            </svg>
+          </button>
+          <button class="wbtn">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="wbtn close">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>
+            扫码
+          </button>
+          <button class="tab on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/></svg>
+            移动端
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6"/></svg>
+            外观
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor" stroke="none"/></svg>
+            关于
+          </button>
+        </div>
+
+        <div class="body">
+          <div class="pstate">
+            <span class="dot warn live"></span>
+            <b>移动端环境运行中</b>
+            <span class="mono">剩 02:41</span>
+            <button class="mini">立即停止</button>
+          </div>
+
+          <div class="grp"><span>什么时候启动</span><i></i></div>
+          <div class="strow">
+            <div class="stl">需要代理时的默认答案</div>
+            <div class="seg"><button class="on">每次问我</button><button>自动开启</button><button>不启用</button></div>
+          </div>
+          <div class="strow">
+            <div class="stl">保持时长<em>到点自动关闭并还原系统代理</em></div>
+            <div class="seg"><button>2 分</button><button class="on">3 分</button><button>5 分</button><button>不限</button></div>
+          </div>
+
+          <div class="grp"><span>连接方式</span><i></i></div>
+          <div class="strow">
+            <div class="stl">代理模式<em>PAC 也接管全部 HTTPS（腾讯系与系统更新除外），失败自动直连</em></div>
+            <div class="seg"><button class="on">全局</button><button>PAC 兼容</button></div>
+          </div>
+
+          <div class="grp"><span>安全兜底 · 不可关闭</span><i></i></div>
+          <div class="strow locked">
+            <div class="stl">关闭软件时还原系统代理</div>
+            <span class="lockchip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 018 0v3.5"/></svg>强制
+            </span>
+          </div>
+          <div class="strow locked">
+            <div class="stl">程序崩溃 / 被强杀后自动还原</div>
+            <span class="lockchip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 018 0v3.5"/></svg>强制
+            </span>
+          </div>
+          <button class="danger">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1016 0"/><path d="M4 12H2.2M4 12l2.6-2.6M4 12l2.6 2.6"/></svg>
+            一键还原系统代理
+          </button>
+        </div>
+
+        <div class="foot">
+          <span class="fnote">改动立即生效，运行中也可改</span>
+          <button class="btn-ghost">恢复默认</button>
+          <button class="btn-prim">完成</button>
+        </div>
+      </div>
+      <div class="bcap"><b>② 移动端环境</b>　把「是否代理」的选择权做成了默认偏好</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 画板 3：外观页 + 关于页 ================= -->
+<div class="board" data-g="3">
+  <div class="bhead">
+    <h2><em>03</em> &nbsp;设置面板 · 外观 &amp; 关于</h2>
+    <span class="sub">低频项收在后面，关于页兼作排障入口</span>
+  </div>
+  <div class="brow">
+
+    <!-- 外观页 -->
+    <div class="bcol">
+      <div class="win">
+        <div id="titlebar">
+          <button class="back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+          </button>
+          <span class="tb-title">设置</span>
+          <span class="spacer"></span>
+          <button class="wbtn on">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            </svg>
+          </button>
+          <button class="wbtn">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="wbtn close">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>
+            扫码
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/></svg>
+            移动端
+          </button>
+          <button class="tab on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6"/></svg>
+            外观
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor" stroke="none"/></svg>
+            关于
+          </button>
+        </div>
+
+        <div class="body">
+          <div class="grp"><span>外观</span><i></i></div>
+          <div class="strow">
+            <div class="stl">主题</div>
+            <div class="seg"><button class="on">深色</button><button>浅色</button><button>跟随系统</button></div>
+          </div>
+          <div class="strow">
+            <div class="stl">取景框外遮罩浓度<em>调低能看清框外内容，调高更聚焦</em></div>
+            <div class="slider"><span class="track"></span><span class="fill"></span><span class="knob"></span></div>
+          </div>
+
+          <div class="grp"><span>窗口行为</span><i></i></div>
+          <div class="strow">
+            <div class="stl">开机自动启动</div>
+            <span class="sw"><i></i></span>
+          </div>
+          <div class="strow">
+            <div class="stl">窗口置顶<em>框选时不会被其他窗口盖住</em></div>
+            <span class="sw on"><i></i></span>
+          </div>
+          <div class="strow">
+            <div class="stl">点关闭按钮时</div>
+            <div class="seg"><button class="on">退出程序</button><button>收到托盘</button></div>
+          </div>
+          <div class="strow">
+            <div class="stl">取景框默认尺寸</div>
+            <div class="seg"><button>小</button><button class="on">中</button><button>大</button></div>
+          </div>
+
+          <div class="privacy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+            <span>关闭程序时若移动端环境仍在运行，会先还原系统代理再退出——这一条不受上面任何设置影响。</span>
+          </div>
+        </div>
+
+        <div class="foot">
+          <span class="fnote">改动立即生效，无需重启</span>
+          <button class="btn-ghost">恢复默认</button>
+          <button class="btn-prim">完成</button>
+        </div>
+      </div>
+      <div class="bcap"><b>③ 外观</b>　窗口行为放这里，关窗语义解释清楚</div>
+    </div>
+
+    <!-- 关于页 -->
+    <div class="bcol">
+      <div class="win">
+        <div id="titlebar">
+          <button class="back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+          </button>
+          <span class="tb-title">设置</span>
+          <span class="spacer"></span>
+          <button class="wbtn on">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            </svg>
+          </button>
+          <button class="wbtn">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="wbtn close">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>
+            扫码
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/></svg>
+            移动端
+          </button>
+          <button class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6"/></svg>
+            外观
+          </button>
+          <button class="tab on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor" stroke="none"/></svg>
+            关于
+          </button>
+        </div>
+
+        <div class="body">
+          <div class="about-hero">
+            <div class="g">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/>
+                <rect x="8" y="8" width="8" height="8" rx="1.2"/>
+              </svg>
+            </div>
+            <div>
+              <div class="t1">屏幕扫码</div>
+              <div class="t2">v0.3.0 · 已是最新版本</div>
+            </div>
+            <button class="chk">检查更新</button>
+          </div>
+
+          <div class="grp"><span>排障与文件</span><i></i></div>
+          <div class="linkrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 014.5 6h4l2 2.5h7A1.5 1.5 0 0119 10v7.5A1.5 1.5 0 0117.5 19h-13A1.5 1.5 0 013 17.5v-10z"/></svg>
+            打开日志目录
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+          </div>
+          <div class="linkrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/></svg>
+            打开证书与配置目录
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+          </div>
+          <div class="linkrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="11" rx="2"/><path d="M7.5 19.5h9"/></svg>
+            快捷键与使用说明
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+          </div>
+          <div class="linkrow" style="color:#aab6c8">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7 3.4v5.4c0 4.5-2.9 7.9-7 9.4-4.1-1.5-7-4.9-7-9.4V6.2l7-3.4z"/></svg>
+            根证书状态
+            <span style="margin-left:auto;font-size:10px;color:#7fd4a8">已安装 · 12 个域名</span>
+          </div>
+
+          <div class="grp"><span>危险操作</span><i></i></div>
+          <button class="danger" style="margin-top:6px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.6h5V7M6.5 7l1 12.4h9L17.5 7"/></svg>
+            重置全部设置
+          </button>
+
+          <div class="privacy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+            <span>全部功能在本机完成，不联网、不上传任何二维码内容与系统代理配置。</span>
+          </div>
+        </div>
+
+        <div class="foot">
+          <span class="fnote">移动端环境：未运行</span>
+          <button class="btn-prim" style="margin-left:auto">完成</button>
+        </div>
+      </div>
+      <div class="bcap"><b>④ 关于</b>　日志目录、证书目录、重置，排障时一步到位</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 画板 4：功能清单 ================= -->
+<div class="board" data-g="4">
+  <div class="bhead">
+    <h2><em>04</em> &nbsp;设置项一览 · 全部选项与默认值</h2>
+    <span class="sub">标蓝＝默认开/默认选中；灰色＝默认关闭；带锁的两项不可关</span>
+  </div>
+
+  <div class="spec">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:76px">分组</th>
+          <th style="width:196px">设置项</th>
+          <th style="width:150px">控件</th>
+          <th style="width:104px">默认</th>
+          <th>作用 / 说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="gd"><td colspan="5">扫码</td></tr>
+        <tr>
+          <td class="gcell">框选</td>
+          <td class="name">全局快捷键</td>
+          <td><span class="ctl">录制</span></td>
+          <td class="def">Alt+Shift+Q</td>
+          <td class="dsc">在任意窗口按下即可调出取景框；冲突时标红提示</td>
+        </tr>
+        <tr>
+          <td class="gcell">框选</td>
+          <td class="name">扫描方式</td>
+          <td><span class="ctl">分段 · 2</span></td>
+          <td class="def">单次</td>
+          <td class="dsc">单次＝读到就停；连续＝持续跟踪刷新中的码</td>
+        </tr>
+        <tr>
+          <td class="gcell">框选</td>
+          <td class="name">识别后自动复制</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def">开</td>
+          <td class="dsc">省掉一次按 C，结果条仍保留手动复制</td>
+        </tr>
+        <tr>
+          <td class="gcell">框选</td>
+          <td class="name">记住上次框选位置</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def">开</td>
+          <td class="dsc">同一页面反复扫码时不用每次重画框</td>
+        </tr>
+        <tr>
+          <td class="gcell">框选</td>
+          <td class="name">扫描时隐藏主窗口</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def">开</td>
+          <td class="dsc">取景框独占屏幕，避免主窗口挡住要扫的区域</td>
+        </tr>
+        <tr>
+          <td class="gcell">判断</td>
+          <td class="name">自动判断手机环境</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def">开</td>
+          <td class="dsc">关掉后只读码不弹代理询问，等于纯扫码模式</td>
+        </tr>
+        <tr>
+          <td class="gcell">判断</td>
+          <td class="name">结果条停留时长</td>
+          <td><span class="ctl">分段 · 3</span></td>
+          <td class="def">中（4s）</td>
+          <td class="dsc">短＝2s / 中＝4s / 长＝8s；手动关闭始终有效</td>
+        </tr>
+        <tr>
+          <td class="gcell">判断</td>
+          <td class="name">识别成功提示音</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def off">关</td>
+          <td class="dsc">取景框不抢焦点时，靠声音确认已读到</td>
+        </tr>
+
+        <tr class="gd"><td colspan="5">移动端环境（代理）</td></tr>
+        <tr>
+          <td class="gcell">启动</td>
+          <td class="name">默认答案</td>
+          <td><span class="ctl">分段 · 3</span></td>
+          <td class="def">每次问我</td>
+          <td class="dsc">决定弹询问卡时预选哪一项，也是「不再询问」后的行为</td>
+        </tr>
+        <tr>
+          <td class="gcell">启动</td>
+          <td class="name">保持时长</td>
+          <td><span class="ctl">分段 · 4</span></td>
+          <td class="def">3 分钟</td>
+          <td class="dsc">2/3/5 分或不限；到点自动关闭并还原</td>
+        </tr>
+        <tr>
+          <td class="gcell">连接</td>
+          <td class="name">代理模式</td>
+          <td><span class="ctl">分段 · 2</span></td>
+          <td class="def">全局</td>
+          <td class="dsc">全局最稳；PAC 也接管全部 HTTPS（腾讯系与系统更新除外），失败自动直连</td>
+        </tr>
+        <tr>
+          <td class="gcell">兜底</td>
+          <td class="name">关闭软件时还原代理</td>
+          <td><span class="ctl">锁定 · 强制</span></td>
+          <td class="def">开</td>
+          <td class="dsc">退出前先还原系统代理，还原完成才真正退出</td>
+        </tr>
+        <tr>
+          <td class="gcell">兜底</td>
+          <td class="name">崩溃/强杀后自动还原</td>
+          <td><span class="ctl">锁定 · 强制</span></td>
+          <td class="def">开</td>
+          <td class="dsc">子进程发现父进程消失，立即自行还原</td>
+        </tr>
+        <tr>
+          <td class="gcell">兜底</td>
+          <td class="name">一键还原系统代理</td>
+          <td><span class="ctl">按钮 · 危险</span></td>
+          <td class="def">—</td>
+          <td class="dsc">任何时候都能手动清干净，不依赖主程序状态</td>
+        </tr>
+
+        <tr class="gd"><td colspan="5">外观与窗口</td></tr>
+        <tr>
+          <td class="gcell">外观</td>
+          <td class="name">主题</td>
+          <td><span class="ctl">分段 · 3</span></td>
+          <td class="def">深色</td>
+          <td class="dsc">深色 / 浅色 / 跟随系统</td>
+        </tr>
+        <tr>
+          <td class="gcell">外观</td>
+          <td class="name">取景框遮罩浓度</td>
+          <td><span class="ctl">滑块</span></td>
+          <td class="def">60%</td>
+          <td class="dsc">调低能看清框外内容，调高更聚焦</td>
+        </tr>
+        <tr>
+          <td class="gcell">窗口</td>
+          <td class="name">开机自动启动</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def off">关</td>
+          <td class="dsc">写入启动项，可随时撤销</td>
+        </tr>
+        <tr>
+          <td class="gcell">窗口</td>
+          <td class="name">窗口置顶</td>
+          <td><span class="ctl">开关</span></td>
+          <td class="def">开</td>
+          <td class="dsc">主窗口与结果条保持在最上层</td>
+        </tr>
+        <tr>
+          <td class="gcell">窗口</td>
+          <td class="name">点关闭按钮时</td>
+          <td><span class="ctl">分段 · 2</span></td>
+          <td class="def">退出程序</td>
+          <td class="dsc">选「收到托盘」时仍保留代理还原逻辑</td>
+        </tr>
+
+        <tr class="gd"><td colspan="5">关于</td></tr>
+        <tr>
+          <td class="gcell">关于</td>
+          <td class="name">检查更新</td>
+          <td><span class="ctl">按钮</span></td>
+          <td class="def">—</td>
+          <td class="dsc">显示当前版本与是否有新版</td>
+        </tr>
+        <tr>
+          <td class="gcell">关于</td>
+          <td class="name">打开日志 / 证书目录</td>
+          <td><span class="ctl">行内链接</span></td>
+          <td class="def">—</td>
+          <td class="dsc">出问题先看日志；根证书状态也在这里查</td>
+        </tr>
+        <tr>
+          <td class="gcell">关于</td>
+          <td class="name">重置全部设置</td>
+          <td><span class="ctl">按钮 · 危险</span></td>
+          <td class="def">—</td>
+          <td class="dsc">二次确认；不影响已签发的证书与系统代理</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <span><i></i>蓝色＝默认值</span>
+    <span><i class="g"></i>灰色＝默认关闭</span>
+    <span>标「锁定 · 强制」的两项不给关，这是安全红线</span>
+  </div>
+</div>
+
+</body>
+</html>

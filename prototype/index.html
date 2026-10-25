@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>框选屏幕二维码 · M0 验证版</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0c10; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #e8ecf4; -webkit-font-smoothing: antialiased;
+  }
+  #stage { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+
+  .hud { position: fixed; z-index: 10; }
+  .topbar {
+    top: 0; left: 0; right: 0; height: 52px; display: flex; align-items: center;
+    gap: 8px; padding: 0 14px;
+    background: linear-gradient(180deg, rgba(10,12,16,.92), rgba(10,12,16,0));
+    pointer-events: none;
+  }
+  .brand { font-size: 13px; letter-spacing: .2px; color: #9aa6ba; pointer-events: auto; }
+  .brand b { color: #e8ecf4; font-weight: 600; }
+  .spacer { flex: 1; }
+
+  button {
+    pointer-events: auto; font: inherit; font-size: 13px;
+    color: #dfe6f2; background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 8px;
+    padding: 7px 13px; cursor: pointer; transition: .15s;
+    backdrop-filter: blur(8px);
+  }
+  button:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.26); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: #2f6bff; border-color: #2f6bff; color: #fff; }
+  button.primary:hover { background: #3f78ff; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .panel {
+    left: 50%; bottom: 22px; transform: translateX(-50%);
+    width: min(760px, calc(100vw - 40px));
+    background: rgba(18,22,30,.94); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 14px; padding: 14px 16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    backdrop-filter: blur(14px); display: none;
+  }
+  .panel.show { display: block; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid currentColor; opacity: .95;
+  }
+  .b-ok { color: #51d88a; } .b-warn { color: #ffb340; } .b-bad { color: #ff6b6b; } .b-info { color: #6ea8ff; }
+  .code {
+    flex: 1; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 13px; line-height: 1.5; word-break: break-all; max-height: 62px; overflow: auto;
+    color: #eaf0fb; user-select: text;
+  }
+  .tip { margin-top: 9px; font-size: 12px; line-height: 1.6; color: #93a1b8; }
+  .tip b { color: #c8d4e6; font-weight: 600; }
+  .meta { font-size: 11px; color: #6b7a92; margin-top: 6px; }
+
+  .empty {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .card {
+    pointer-events: auto; width: min(520px, calc(100vw - 48px));
+    background: rgba(18,22,30,.96); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px; padding: 24px; text-align: left;
+    box-shadow: 0 24px 70px rgba(0,0,0,.6);
+  }
+  .card h1 { font-size: 17px; margin: 0 0 6px; font-weight: 600; }
+  .card p { font-size: 13px; line-height: 1.7; color: #98a6bd; margin: 0 0 14px; }
+  .card ol { font-size: 12.5px; line-height: 1.9; color: #8e9cb4; padding-left: 18px; margin: 0 0 16px; }
+  .card .actions { display: flex; gap: 9px; flex-wrap: wrap; }
+  .warn {
+    margin-top: 12px; font-size: 12px; line-height: 1.6;
+    color: #ffb340; background: rgba(255,179,64,.09);
+    border: 1px solid rgba(255,179,64,.28); border-radius: 8px; padding: 9px 11px; display: none;
+  }
+  .warn.show { display: block; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div class="hud topbar">
+  <span class="brand"><b>框选屏幕二维码</b> · M0 验证版</span>
+  <span class="spacer"></span>
+  <button id="btnLive">共享屏幕</button>
+  <button id="btnImage">图片识别</button>
+  <button id="btnPause" disabled>暂停</button>
+  <button id="btnReset" disabled>重置框</button>
+  <button id="btnClear" disabled>退出共享</button>
+  <input id="file" type="file" accept="image/*" class="hidden" />
+</div>
+
+<div class="empty" id="empty">
+  <div class="card">
+    <h1>把屏幕上的二维码框出来，实时读出内容</h1>
+    <p>用于验证「框选屏幕 → 实时解码」这条链路：拖动鼠标画框、拖角拉伸、命中后可直接复制码值。</p>
+    <ol>
+      <li>点「共享屏幕」，在弹窗里选择要捕获的<b>整个屏幕</b>（不是标签页）</li>
+      <li>屏幕上出现取景框后，拖到二维码上，会自动识别</li>
+      <li>识别结果出现在底部，一键复制，再发到 PC 微信「文件传输助手」打开</li>
+    </ol>
+    <div class="actions">
+      <button class="primary" id="btnStart">开始共享屏幕</button>
+      <button id="btnImage2">上传截图识别</button>
+    </div>
+    <div class="warn" id="warn"></div>
+  </div>
+</div>
+
+<div class="hud panel" id="panel">
+  <div class="row">
+    <span class="badge b-info" id="badge">等待识别</span>
+    <div class="code" id="code"></div>
+    <button class="primary" id="btnCopy">复制</button>
+  </div>
+  <div class="tip" id="tip"></div>
+  <div class="meta" id="meta"></div>
+</div>
+
+<script src="./vendor/jsQR.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var stage = document.getElementById("stage");
+  var ctx = stage.getContext("2d", { alpha: false });
+  var emptyEl = document.getElementById("empty");
+  var panel = document.getElementById("panel");
+  var badgeEl = document.getElementById("badge");
+  var codeEl = document.getElementById("code");
+  var tipEl = document.getElementById("tip");
+  var metaEl = document.getElementById("meta");
+  var warnEl = document.getElementById("warn");
+
+  var btnLive = document.getElementById("btnLive");
+  var btnImage = document.getElementById("btnImage");
+  var btnPause = document.getElementById("btnPause");
+  var btnReset = document.getElementById("btnReset");
+  var btnClear = document.getElementById("btnClear");
+  var btnCopy = document.getElementById("btnCopy");
+  var btnStart = document.getElementById("btnStart");
+  var btnImage2 = document.getElementById("btnImage2");
+  var fileInput = document.getElementById("file");
+
+  var video = document.createElement("video");
+  video.playsInline = true;
+  video.muted = true;
+
+  var stream = null;
+  var imageEl = null;
+  var box = null;            // { x, y, w, h } in CSS px of stage
+  var drag = null;
+  var paused = false;
+  var lastResult = null;     // { data, at }
+  var hitFlash = 0;
+  var missCount = 0;
+  var lastDecodeMs = 0;
+  var decodeCount = 0;
+  var skipCount = 0;
+  var decodeBusy = false;
+  var prevSig = null;
+  var lastSig = null;
+  var timer = null;
+  var MIN = 60;
+
+  function dpr() { return Math.min(window.devicePixelRatio || 1, 2); }
+
+  function resize() {
+    var r = dpr();
+    var w = Math.max(1, Math.round(stage.clientWidth * r));
+    var h = Math.max(1, Math.round(stage.clientHeight * r));
+    if (stage.width !== w || stage.height !== h) {
+      stage.width = w; stage.height = h;
+    }
+  }
+
+  function sourceSize() {
+    if (video && video.videoWidth) return { w: video.videoWidth, h: video.videoHeight };
+    if (imageEl) return { w: imageEl.naturalWidth, h: imageEl.naturalHeight };
+    return null;
+  }
+
+  function fit() {
+    var s = sourceSize();
+    var cw = stage.clientWidth, ch = stage.clientHeight;
+    if (!s) return { ox: 0, oy: 0, dw: cw, dh: ch, scale: 1 };
+    var k = Math.min(cw / s.w, ch / s.h);
+    var dw = s.w * k, dh = s.h * k;
+    return { ox: (cw - dw) / 2, oy: (ch - dh) / 2, dw: dw, dh: dh, scale: k };
+  }
+
+  function clampBox(b) {
+    var f = fit();
+    var x = Math.max(f.ox, Math.min(b.x, f.ox + f.dw));
+    var y = Math.max(f.oy, Math.min(b.y, f.oy + f.dh));
+    var maxW = f.ox + f.dw - x, maxH = f.oy + f.dh - y;
+    var w = Math.max(MIN, Math.min(b.w, maxW));
+    var h = Math.max(MIN, Math.min(b.h, maxH));
+    return { x: x, y: y, w: w, h: h };
+  }
+
+  var HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+  var HANDLE_R = 9;
+
+  function handlePoints(b) {
+    return {
+      nw: [b.x, b.y], n: [b.x + b.w / 2, b.y], ne: [b.x + b.w, b.y],
+      e: [b.x + b.w, b.y + b.h / 2], se: [b.x + b.w, b.y + b.h],
+      s: [b.x + b.w / 2, b.y + b.h], sw: [b.x, b.y + b.h], w: [b.x, b.y + b.h / 2]
+    };
+  }
+
+  function hitHandle(b, px, py) {
+    if (!b) return null;
+    var pts = handlePoints(b);
+    for (var i = 0; i < HANDLES.length; i++) {
+      var h = HANDLES[i], p = pts[h];
+      if (Math.abs(px - p[0]) <= HANDLE_R + 3 && Math.abs(py - p[1]) <= HANDLE_R + 3) return h;
+    }
+    return null;
+  }
+
+  function inBox(b, px, py) {
+    return b && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h;
+  }
+
+  // ---------- decode ----------
+
+  var work = document.createElement("canvas");
+  var wctx = work.getContext("2d", { willReadFrequently: true });
+
+  function signature(data, w, h) {
+    var S = 32, out = new Float32Array(S * S);
+    var sx = w / S, sy = h / S;
+    for (var y = 0; y < S; y++) {
+      for (var x = 0; x < S; x++) {
+        var px = Math.min(w - 1, (x * sx) | 0);
+        var py = Math.min(h - 1, (y * sy) | 0);
+        var i = (py * w + px) * 4;
+        out[y * S + x] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      }
+    }
+    return out;
+  }
+
+  function diffRatio(a, b) {
+    if (!a || !b) return 1;
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+    return s / (a.length * 255);
+  }
+
+  function sourceEl() {
+    if (video && video.readyState >= 2) return video;
+    if (imageEl && imageEl.complete) return imageEl;
+    return null;
+  }
+
+  function decodeOnce(force) {
+    if (decodeBusy || paused) return;
+    var el = sourceEl();
+    var s = sourceSize();
+    if (!el || !s || !box) return;
+
+    var f = fit();
+    var sx = (box.x - f.ox) / f.scale;
+    var sy = (box.y - f.oy) / f.scale;
+    var sw = box.w / f.scale;
+    var sh = box.h / f.scale;
+
+    sx = Math.max(0, sx); sy = Math.max(0, sy);
+    sw = Math.min(sw, s.w - sx); sh = Math.min(sh, s.h - sy);
+    if (sw < 24 || sh < 24) return;
+
+    var MAX = 960;
+    var k = Math.min(1, MAX / Math.max(sw, sh));
+    var dw = Math.max(24, Math.round(sw * k));
+    var dh = Math.max(24, Math.round(sh * k));
+    if (work.width !== dw || work.height !== dh) { work.width = dw; work.height = dh; }
+
+    decodeBusy = true;
+    try {
+      wctx.drawImage(el, sx, sy, sw, sh, 0, 0, dw, dh);
+      var img = wctx.getImageData(0, 0, dw, dh);
+      var sig = signature(img.data, dw, dh);
+
+      if (!force && lastSig && lastDecodeMs > 0) {
+        var d = diffRatio(sig, lastSig);
+        if (d < 0.012) { skipCount++; lastSig = sig; decodeBusy = false; updateMeta(); return; }
+      }
+      lastSig = sig;
+
+      var t0 = performance.now();
+      var res = window.jsQR ? window.jsQR(img.data, dw, dh, { inversionAttempts: "attemptBoth" }) : null;
+      lastDecodeMs = Math.round(performance.now() - t0);
+      decodeCount++;
+
+      if (res && res.data) {
+        onHit(res.data, sw, sh);
+      } else {
+        missCount++;
+        if (missCount === 8 && !lastResult) setBadge("未检测到二维码，试试把框拉大或对准整张码", "b-warn");
+      }
+      updateMeta();
+    } catch (e) {
+      /* 单帧失败不打断循环 */
+    } finally {
+      decodeBusy = false;
+    }
+  }
+
+  function classify(text) {
+    var t = (text || "").trim();
+    if (/^https?:\/\/open\.weixin\.qq\.com\/connect\//i.test(t))
+      return { k: "qrconnect", b: "微信扫码登录（qrconnect）", cls: "b-bad",
+        tip: "<b>这类码 PC 端无法替代手机。</b>它校验的是「持有一台已登录微信的手机」，解码得到的链接在电脑上打开只会再让你扫码一次。<b>不要在这上面继续投入</b>，改走账号密码/验证码登录，或让业务方增加 PC 绑定通道。" };
+    if (/^https?:\/\/(mp|lp\.open)\.weixin\.qq\.com\//i.test(t))
+      return { k: "wxconfirm", b: "微信登录确认页", cls: "b-bad",
+        tip: "<b>大概率无解。</b>这是微信的授权确认页，同样要求「已登录微信的移动端」确认。可以试着在 PC 微信里打开（复制→文件传输助手→点链接），但成功率低。" };
+    if (/^weixin:\/\//i.test(t))
+      return { k: "scheme", b: "微信内部 scheme", cls: "b-warn",
+        tip: "这是微信内部协议，可直接唤起微信/小程序试试；但唤起后若仍弹「请用手机扫码」，说明绑定逻辑在校验移动端身份。" };
+    if (/^https?:\/\//i.test(t))
+      return { k: "bizurl", b: "业务链接", cls: "b-ok",
+        tip: "<b>这条最有希望。</b>复制后：打开 PC 微信 → <b>文件传输助手</b> → 粘贴发送 → 点击这条链接（会用微信内置浏览器打开，自带你的微信登录态）。若该页走的是公众号网页授权，绑定通常能直接成功。" };
+    if (t.length <= 64 && /^[A-Za-z0-9_\-\/]+$/.test(t))
+      return { k: "token", b: "纯码值 / token", cls: "b-ok",
+        tip: "<b>这是最好的情况。</b>码里只是一个 token，说明服务端要的是「谁提交了这个 token」。直接把它粘贴到小程序的绑定输入框；若有开放接口，也可用当前 PC 微信身份提交绑定。" };
+    return { k: "other", b: "未识别的码内容", cls: "b-warn", tip: "内容不是常见形态，先复制原文人工判断。" };
+  }
+
+  function onHit(data, sw, sh) {
+    var now = Date.now();
+    missCount = 0;
+    if (lastResult && lastResult.data === data && now - lastResult.at < 1500) return;
+    lastResult = { data: data, at: now };
+    hitFlash = performance.now();
+
+    var c = classify(data);
+    codeEl.textContent = data;
+    badgeEl.textContent = c.b;
+    badgeEl.className = "badge " + c.cls;
+    tipEl.innerHTML = c.tip;
+    panel.classList.add("show");
+    emptyEl.classList.add("hidden");
+    btnClear.disabled = false;
+    beep();
+  }
+
+  function updateMeta() {
+    metaEl.textContent = "解码 " + lastDecodeMs + "ms · ROI " + Math.round(box ? box.w : 0) + "×" +
+      Math.round(box ? box.h : 0) + "px · 已解 " + decodeCount + " 帧 · 跳过 " +
+      skipCount + " 帧（画面未变化）";
+  }
+
+  function setBadge(text, cls) {
+    badgeEl.textContent = text;
+    badgeEl.className = "badge " + (cls || "b-info");
+    panel.classList.add("show");
+    emptyEl.classList.add("hidden");
+  }
+
+  var audioCtx = null;
+  function beep() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = 1180; o.type = "sine";
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.13);
+    } catch (e) {}
+  }
+
+  // ---------- render ----------
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function render() {
+    var r = dpr();
+    resize();
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+
+    var cw = stage.clientWidth, ch = stage.clientHeight;
+    ctx.fillStyle = "#0a0c10";
+    ctx.fillRect(0, 0, cw, ch);
+
+    var el = sourceEl();
+    var f = fit();
+    if (el) {
+      try { ctx.drawImage(el, f.ox, f.oy, f.dw, f.dh); } catch (e) {}
+    }
+
+    if (box && el) {
+      var b = box;
+      var t = performance.now();
+      var flashing = t - hitFlash < 420;
+      var accent = flashing ? "#51d88a" : "#3f8cff";
+
+      ctx.fillStyle = "rgba(6,8,14,.55)";
+      ctx.fillRect(0, 0, cw, b.y);
+      ctx.fillRect(0, b.y + b.h, cw, ch - b.y - b.h);
+      ctx.fillRect(0, b.y, b.x, b.h);
+      ctx.fillRect(b.x + b.w, b.y, cw - b.x - b.w, b.h);
+
+      ctx.save();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = flashing ? 18 : 8;
+      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      ctx.restore();
+
+      // corner brackets
+      var L = Math.min(20, b.w / 3, b.h / 3);
+      ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.lineCap = "round";
+      var corners = [
+        [b.x, b.y, 1, 1], [b.x + b.w, b.y, -1, 1],
+        [b.x, b.y + b.h, 1, -1], [b.x + b.w, b.y + b.h, -1, -1]
+      ];
+      for (var i = 0; i < corners.length; i++) {
+        var c = corners[i];
+        ctx.beginPath();
+        ctx.moveTo(c[0] + c[2] * L, c[1]);
+        ctx.lineTo(c[0], c[1]);
+        ctx.lineTo(c[0], c[1] + c[3] * L);
+        ctx.stroke();
+      }
+
+      // handles
+      var pts = handlePoints(b);
+      for (var j = 0; j < HANDLES.length; j++) {
+        var p = pts[HANDLES[j]];
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff"; ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = accent; ctx.stroke();
+      }
+
+      // size label
+      var label = Math.round(b.w) + " × " + Math.round(b.h);
+      ctx.font = "12px -apple-system, 'Segoe UI', sans-serif";
+      var tw = ctx.measureText(label).width;
+      ctx.fillStyle = "rgba(12,16,24,.9)";
+      roundRect(ctx, b.x, Math.max(6, b.y - 26), tw + 16, 20, 6);
+      ctx.fill();
+      ctx.fillStyle = "#c9d6ea";
+      ctx.fillText(label, b.x + 8, Math.max(6, b.y - 26) + 14);
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  // ---------- interaction ----------
+
+  function pos(e) {
+    var r = stage.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  stage.addEventListener("pointerdown", function (e) {
+    if (!sourceEl()) return;
+    var p = pos(e);
+    stage.setPointerCapture(e.pointerId);
+
+    var h = hitHandle(box, p.x, p.y);
+    if (h) { drag = { mode: "resize", handle: h, orig: Object.assign({}, box), sx: p.x, sy: p.y }; return; }
+    if (inBox(box, p.x, p.y)) { drag = { mode: "move", orig: Object.assign({}, box), sx: p.x, sy: p.y }; return; }
+
+    drag = { mode: "new", sx: p.x, sy: p.y };
+    box = { x: p.x, y: p.y, w: MIN, h: MIN };
+  });
+
+  stage.addEventListener("pointermove", function (e) {
+    var p = pos(e);
+    if (!drag) {
+      var h = hitHandle(box, p.x, p.y);
+      stage.style.cursor = h ? cursorFor(h) : (inBox(box, p.x, p.y) ? "move" : "crosshair");
+      return;
+    }
+    if (drag.mode === "new") {
+      box = clampBox({
+        x: Math.min(drag.sx, p.x), y: Math.min(drag.sy, p.y),
+        w: Math.abs(p.x - drag.sx), h: Math.abs(p.y - drag.sy)
+      });
+    } else if (drag.mode === "move") {
+      var o = drag.orig;
+      box = clampBox({ x: o.x + (p.x - drag.sx), y: o.y + (p.y - drag.sy), w: o.w, h: o.h });
+    } else {
+      var ob = drag.orig, hh = drag.handle;
+      var left = ob.x, top = ob.y, right = ob.x + ob.w, bottom = ob.y + ob.h;
+      if (hh.indexOf("w") >= 0) left = Math.min(p.x, right - MIN);
+      if (hh.indexOf("e") >= 0) right = Math.max(p.x, left + MIN);
+      if (hh.indexOf("n") >= 0) top = Math.min(p.y, bottom - MIN);
+      if (hh.indexOf("s") >= 0) bottom = Math.max(p.y, top + MIN);
+      box = clampBox({ x: left, y: top, w: right - left, h: bottom - top });
+    }
+  });
+
+  stage.addEventListener("pointerup", function () {
+    if (drag) { drag = null; missCount = 0; prevSig = null; lastSig = null; decodeOnce(true); }
+  });
+  stage.addEventListener("pointercancel", function () { drag = null; });
+
+  function cursorFor(h) {
+    if (h === "n" || h === "s") return "ns-resize";
+    if (h === "e" || h === "w") return "ew-resize";
+    if (h === "nw" || h === "se") return "nwse-resize";
+    return "nesw-resize";
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { box = null; panel.classList.remove("show"); return; }
+    if (e.code === "Space") { e.preventDefault(); togglePause(); return; }
+    if (e.key === "r" || e.key === "R") { resetBox(); return; }
+    if (e.key === "c" || e.key === "C") { copyCode(); return; }
+  });
+
+  // ---------- actions ----------
+
+  function resetBox() {
+    var f = fit();
+    var size = Math.min(360, f.dw * 0.5, f.dh * 0.7);
+    box = { x: f.ox + (f.dw - size) / 2, y: f.oy + (f.dh - size) / 2, w: size, h: size };
+    missCount = 0; prevSig = null; lastSig = null; skipCount = 0;
+    decodeOnce(true);
+  }
+
+  function togglePause() {
+    paused = !paused;
+    btnPause.textContent = paused ? "继续" : "暂停";
+    setBadge(paused ? "已暂停解码" : "识别中…", paused ? "b-warn" : "b-info");
+  }
+
+  function copyCode() {
+    var text = codeEl.textContent || "";
+    if (!text) return;
+    var done = function () {
+      btnCopy.textContent = "已复制";
+      setTimeout(function () { btnCopy.textContent = "复制"; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+
+  function startTimer() {
+    stopTimer();
+    timer = setInterval(function () { decodeOnce(false); }, 130);
+  }
+  function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+
+  function enterLiveMode() {
+    emptyEl.classList.add("hidden");
+    panel.classList.remove("show");
+    btnPause.disabled = false; btnReset.disabled = false; btnClear.disabled = false;
+    startTimer();
+    var s = sourceSize();
+    if (s) resetBox();
+  }
+
+  function startShare() {
+    var md = navigator.mediaDevices;
+    if (!md || !md.getDisplayMedia) {
+      showWarn("当前环境不支持屏幕共享（可能是内嵌预览窗口）。请用 Chrome / Edge 直接打开本文件，或运行本地服务器后访问 http://localhost:8123。");
+      return;
+    }
+    md.getDisplayMedia({
+      video: { frameRate: { ideal: 30 }, width: { ideal: 3840 }, height: { ideal: 2160 } },
+      audio: false
+    }).then(function (st) {
+      stream = st;
+      video.srcObject = st;
+      video.play();
+      imageEl = null;
+      video.onloadedmetadata = function () { enterLiveMode(); };
+      st.getVideoTracks()[0].addEventListener("ended", stopShare);
+    }).catch(function (err) {
+      showWarn("共享被取消或被拦截：" + (err && err.message ? err.message : "未知原因") + "。也可以先「上传截图识别」。");
+    });
+  }
+
+  function stopShare() {
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    video.srcObject = null;
+    stopTimer();
+    box = null;
+    emptyEl.classList.remove("hidden");
+    panel.classList.remove("show");
+    btnPause.disabled = true; btnReset.disabled = true; btnClear.disabled = true;
+    codeEl.textContent = ""; lastResult = null;
+  }
+
+  function loadImage(file) {
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      imageEl = img;
+      video.srcObject = null;
+      emptyEl.classList.add("hidden");
+      panel.classList.remove("show");
+      btnPause.disabled = false; btnReset.disabled = false; btnClear.disabled = false;
+      startTimer();
+      resetBox();
+    };
+    img.src = url;
+  }
+
+  function showWarn(msg) {
+    warnEl.textContent = msg;
+    warnEl.classList.add("show");
+    emptyEl.classList.remove("hidden");
+  }
+
+  // ---------- wiring ----------
+
+  btnLive.onclick = startShare;
+  btnStart.onclick = startShare;
+  btnImage.onclick = function () { fileInput.click(); };
+  btnImage2.onclick = function () { fileInput.click(); };
+  btnPause.onclick = togglePause;
+  btnReset.onclick = resetBox;
+  btnClear.onclick = stopShare;
+  btnCopy.onclick = copyCode;
+  fileInput.onchange = function (e) { loadImage(e.target.files && e.target.files[0]); };
+
+  if (!window.jsQR) showWarn("解码库未加载（vendor/jsQR.js 缺失），请确认文件完整。");
+
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

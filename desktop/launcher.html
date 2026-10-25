@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>屏幕扫码</title>
+<style>
+  /* ============================================================
+     主题变量：深色为默认，浅色只覆盖颜色，不动布局
+     ============================================================ */
+  :root {
+    --bg: #0c1017;
+    --panel: #141a23;
+    --panel-2: #18202c;
+    --line: rgba(255,255,255,.075);
+    --line-2: rgba(255,255,255,.14);
+    --txt: #e9eef7;
+    --dim: #8a97ac;
+    --dimmer: #5f6d82;
+    --accent: #3b82f6;
+    --accent-2: #2563eb;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+
+    --tb-bg: linear-gradient(180deg, #121822, #0c1017);
+    --hover: rgba(255,255,255,.09);
+    --hover-2: rgba(255,255,255,.05);
+    --kbd-bg: rgba(255,255,255,.07);
+    --seg-bg: rgba(255,255,255,.05);
+    --seg-on-bg: rgba(59,130,246,.22);
+    --seg-on-fg: #b3cfff;
+    --seg-on-line: rgba(59,130,246,.42);
+    --sw-off: rgba(255,255,255,.13);
+    --on-bg: rgba(59,130,246,.2);
+    --on-fg: #cfe2ff;
+    --on-line: rgba(59,130,246,.4);
+    --danger-fg: #ff9b9b;
+    --danger-bg: rgba(229,72,77,.08);
+    --danger-line: rgba(229,72,77,.4);
+    --warn-fg: #ffd68a;
+    --warn-sub: #ad9260;
+    --warn-bg: linear-gradient(180deg, rgba(251,191,36,.1), rgba(251,191,36,.035));
+    --warn-line: rgba(251,191,36,.28);
+    --chip-bg: rgba(255,255,255,.05);
+    --scroll: rgba(255,255,255,.12);
+  }
+
+  body[data-theme="light"] {
+    --bg: #f2f5fa;
+    --panel: #ffffff;
+    --panel-2: #f7f9fd;
+    --line: rgba(16,24,40,.085);
+    --line-2: rgba(16,24,40,.15);
+    --txt: #17202f;
+    --dim: #55637a;
+    --dimmer: #8b97a9;
+    --tb-bg: linear-gradient(180deg, #ffffff, #eef2f9);
+    --hover: rgba(16,24,40,.06);
+    --hover-2: rgba(16,24,40,.04);
+    --kbd-bg: rgba(16,24,40,.05);
+    --seg-bg: rgba(16,24,40,.05);
+    --seg-on-bg: rgba(59,130,246,.14);
+    --seg-on-fg: #1d4ed8;
+    --seg-on-line: rgba(59,130,246,.4);
+    --sw-off: rgba(16,24,40,.16);
+    --on-bg: rgba(59,130,246,.14);
+    --on-fg: #1d4ed8;
+    --on-line: rgba(59,130,246,.38);
+    --danger-fg: #c23b32;
+    --danger-bg: rgba(229,72,77,.06);
+    --danger-line: rgba(229,72,77,.32);
+    --warn-fg: #8a5a00;
+    --warn-sub: #9b7635;
+    --warn-bg: linear-gradient(180deg, rgba(251,191,36,.16), rgba(251,191,36,.07));
+    --warn-line: rgba(214,158,46,.4);
+    --chip-bg: rgba(16,24,40,.05);
+    --scroll: rgba(16,24,40,.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--txt);
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+    -webkit-user-select: none; user-select: none;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* ============================================================
+     自定义标题栏
+     ============================================================ */
+  #titlebar {
+    height: 40px; flex: 0 0 40px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 6px 0 16px;
+    -webkit-app-region: drag;
+    border-bottom: 1px solid var(--line);
+    background: var(--tb-bg);
+  }
+  #titlebar .logo {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.16), 0 0 10px rgba(59,130,246,.7);
+    flex: 0 0 auto;
+  }
+  #titlebar .name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+  #titlebar .ver {
+    font-size: 10px; color: var(--dimmer); border: 1px solid var(--line-2);
+    border-radius: 5px; padding: 0 5px; line-height: 15px; margin-left: 2px;
+  }
+  #titlebar .spacer { flex: 1; }
+  #tbTitle { display: none; font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+  #btnBack {
+    display: none; -webkit-app-region: no-drag;
+    width: 26px; height: 26px; margin-left: -8px; flex: 0 0 26px;
+    border: 0; border-radius: 7px; background: transparent; color: var(--txt);
+    align-items: center; justify-content: center; cursor: pointer;
+  }
+  #btnBack:hover { background: var(--hover); }
+  body.settings #btnBack { display: inline-flex; }
+  body.settings #tbTitle { display: inline; }
+  body.settings #titlebar .logo,
+  body.settings #titlebar .name,
+  body.settings #titlebar .ver { display: none; }
+
+  .wbtn {
+    -webkit-app-region: no-drag;
+    width: 30px; height: 26px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--dim); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .14s, color .14s;
+  }
+  .wbtn:hover { background: var(--hover); color: var(--txt); }
+  .wbtn.on { background: var(--on-bg); color: var(--on-fg); box-shadow: inset 0 0 0 1px var(--on-line); }
+  .wbtn.close:hover { background: #e5484d; color: #fff; }
+  #icoRestore { display: none; }
+  body.maximized #icoMax { display: none; }
+  body.maximized #icoRestore { display: block; }
+
+  /* ============================================================
+     通用容器
+     ============================================================ */
+  #main {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    /* 窗口拉高时内容块在剩余空间里垂直居中；内容高过窗口时 safe 会让它退化成
+       顶部对齐，不会被裁掉脑袋（纯 center 在小窗口下会把 hero 顶出可视区） */
+    justify-content: safe center;
+    padding: 18px 20px 12px;
+    overflow-y: auto; overflow-x: hidden;
+    scrollbar-gutter: stable;
+  }
+  .shell {
+    /* 窗口拉宽时靠这个限宽：内容不跟着拉伸变形，两侧留白 */
+    width: 100%; max-width: 680px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 15px;
+    flex: 0 0 auto;
+  }
+
+  .hero { display: flex; gap: 13px; align-items: flex-start; }
+  .hero .glyph {
+    width: 46px; height: 46px; flex: 0 0 46px; border-radius: 13px;
+    background: linear-gradient(150deg, #2c6ef2, #1a45b8);
+    box-shadow: 0 8px 22px rgba(37,99,235,.38), inset 0 1px 0 rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+  }
+  .hero h1 { margin: 1px 0 5px; font-size: 16px; font-weight: 600; letter-spacing: .2px; }
+  .hero p { margin: 0; font-size: 11.8px; line-height: 1.65; color: var(--dim); }
+
+  /* ---------- 主操作 ---------- */
+  #btnStart {
+    position: relative; overflow: hidden;
+    width: 100%; height: 58px; border: 0; border-radius: 13px; cursor: pointer;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff; font: inherit;
+    display: flex; align-items: center; gap: 11px; padding: 0 16px;
+    box-shadow: 0 10px 26px rgba(37,99,235,.34), inset 0 1px 0 rgba(255,255,255,.22);
+    transition: transform .12s, box-shadow .16s, filter .16s;
+    flex: 0 0 auto;
+  }
+  #btnStart:hover { filter: brightness(1.07); box-shadow: 0 14px 32px rgba(37,99,235,.44), inset 0 1px 0 rgba(255,255,255,.25); }
+  #btnStart:active { transform: translateY(1px) scale(.995); }
+  #btnStart .txt { font-size: 14.5px; font-weight: 600; letter-spacing: .3px; }
+  #btnStart .grow { flex: 1; }
+  #btnStart kbd {
+    font-family: Consolas, monospace; font-size: 10.5px; font-weight: 400;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.28);
+    border-radius: 6px; padding: 3px 7px; letter-spacing: .4px;
+    color: #fff;
+  }
+
+  /* ---------- 状态卡 ---------- */
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 0 0 auto; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 12px 11px; min-width: 0;
+  }
+  .card .label { font-size: 10.5px; color: var(--dimmer); letter-spacing: .5px; margin-bottom: 7px; }
+  .card .val {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 600; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card .sub { margin-top: 4px; font-size: 10.5px; color: var(--dimmer); line-height: 1.5; overflow: hidden; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--dimmer); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(52,211,153,.65); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 8px rgba(251,191,36,.6); }
+  .dot.bad { background: var(--bad); box-shadow: 0 0 8px rgba(248,113,113,.6); }
+  .dot.live { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* ---------- 代理横幅 ---------- */
+  #proxyBanner {
+    display: none; align-items: center; gap: 11px;
+    padding: 11px 13px; border-radius: 11px;
+    border: 1px solid var(--warn-line);
+    background: var(--warn-bg);
+    flex: 0 0 auto;
+  }
+  #proxyBanner.show { display: flex; }
+  #proxyBanner .ring {
+    width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%;
+    border: 2px solid rgba(251,191,36,.28); border-top-color: var(--warn);
+    animation: spin 1.1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #proxyBanner .txt { flex: 1; min-width: 0; }
+  #proxyBanner .t1 { font-size: 12px; font-weight: 600; color: var(--warn-fg); }
+  #proxyBanner .t2 { font-size: 10.5px; color: var(--warn-sub); margin-top: 3px; line-height: 1.5; }
+
+  /* ---------- 使用流程 ---------- */
+  .steps { flex: 0 0 auto; }
+  .sec {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10.5px; color: var(--dimmer); letter-spacing: .6px; margin-bottom: 9px;
+  }
+  .sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .step { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 8px; }
+  .step i {
+    flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%;
+    background: rgba(59,130,246,.13); color: #7fb0ff;
+    font-style: normal; font-size: 10px; line-height: 17px; text-align: center;
+    font-weight: 600; margin-top: .5px;
+  }
+  body[data-theme="light"] .step i { color: #2b62c4; }
+  .step span { font-size: 11.5px; line-height: 1.6; color: var(--dim); }
+  .step span b { color: var(--txt); font-weight: 600; }
+
+  /* ---------- 底部 ---------- */
+  footer { flex: 0 0 auto; padding: 0 20px 12px; }
+  body.settings footer { display: none; }
+  footer .fwrap { max-width: 680px; margin: 0 auto; }
+  footer .frow {
+    display: flex; align-items: center; gap: 8px;
+    padding-top: 11px; border-top: 1px solid var(--line);
+  }
+  footer .keys { flex: 1; font-size: 10.5px; color: var(--dimmer); line-height: 1.7; min-width: 0; }
+  footer .keys b { color: var(--dim); font-weight: 400; }
+  kbd {
+    font-family: Consolas, monospace; font-size: 9.5px; background: var(--kbd-bg);
+    border: 1px solid var(--line-2); border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 4px; color: var(--dim);
+  }
+  #btnQuit {
+    font: inherit; font-size: 11.5px; padding: 6px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line-2); background: transparent; color: var(--dim);
+    transition: background .14s, color .14s, border-color .14s;
+    flex: 0 0 auto;
+  }
+  #btnQuit:hover { background: rgba(229,72,77,.12); border-color: rgba(229,72,77,.4); color: var(--danger-fg); }
+  #proxyStop {
+    font: inherit; font-size: 11px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+    border: 1px solid rgba(251,191,36,.45); background: rgba(251,191,36,.1); color: var(--warn-fg);
+    white-space: nowrap; flex: 0 0 auto; min-width: max-content;
+  }
+  #proxyStop:hover { background: rgba(251,191,36,.2); }
+
+  /* ============================================================
+     设置面板
+     ============================================================ */
+  #settings { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  body.settings #settings { display: flex; }
+  body.settings #main { display: none; }
+
+  .tabs {
+    flex: 0 0 48px; display: flex; align-items: center; gap: 5px;
+    padding: 0 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--hover-2), transparent);
+  }
+  .tab {
+    flex: 1; min-width: 0; height: 34px; border: 0; border-radius: 8px; background: transparent;
+    color: var(--dimmer); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font: inherit; font-size: 10.8px; transition: background .14s, color .14s;
+    padding: 0 4px;
+  }
+  .tab svg { width: 14px; height: 14px; flex: 0 0 14px; }
+  .tab:hover { color: var(--dim); background: var(--hover-2); }
+  .tab.on { background: var(--on-bg); color: var(--on-fg); box-shadow: inset 0 0 0 1px var(--on-line); }
+
+  .pbody {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    padding: 12px 16px 0; scrollbar-gutter: stable;
+  }
+  .pane { display: none; }
+  .pane.on { display: block; }
+  .pane .shell { gap: 0; flex: 0 0 auto; max-width: 680px; }
+
+  .grp {
+    display: flex; align-items: center; gap: 8px; margin: 11px 0 1px;
+    font-size: 10px; color: var(--dimmer); letter-spacing: .8px;
+  }
+  .grp:first-child { margin-top: 0; }
+  .grp i { flex: 1; height: 1px; background: var(--line); }
+
+  .strow {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 39px; border-bottom: 1px solid var(--line);
+  }
+  .strow:last-child { border-bottom: 0; }
+  .stl { flex: 1; min-width: 0; font-size: 11.8px; color: var(--txt); line-height: 1.3; }
+  .stl em { display: block; font-style: normal; font-size: 9.8px; color: var(--dimmer); margin-top: 2px; line-height: 1.4; }
+
+  .seg {
+    display: inline-flex; flex: 0 0 auto; padding: 2px;
+    background: var(--seg-bg); border: 1px solid var(--line); border-radius: 7px;
+  }
+  .seg button {
+    border: 0; background: transparent; color: var(--dim); font: inherit;
+    font-size: 10.5px; line-height: 1; padding: 5px 9px; border-radius: 5px; cursor: pointer;
+    white-space: nowrap; transition: background .14s, color .14s;
+  }
+  .seg button:hover { color: var(--txt); }
+  .seg button.on {
+    background: var(--seg-on-bg); color: var(--seg-on-fg);
+    box-shadow: inset 0 0 0 1px var(--seg-on-line);
+  }
+
+  .sw {
+    position: relative; width: 32px; height: 18px; flex: 0 0 32px;
+    border-radius: 9px; background: var(--sw-off); cursor: pointer;
+    transition: background .16s;
+  }
+  .sw i {
+    position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+    border-radius: 50%; background: #fff; opacity: .72; transition: left .16s, opacity .16s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.28);
+  }
+  .sw.on { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 0 10px rgba(37,99,235,.4); }
+  .sw.on i { left: 16px; opacity: 1; }
+
+  /* 「点击方式」这一行：总开关关着时整行压暗且不可点。
+     摆在那儿是预告下级的选项，而不是一个可用的开关 */
+  .strow.dim { opacity: .48; pointer-events: none; }
+  .strow.dim .stl { color: var(--dim); }
+
+  /* ---------- 说明问号 + 浮窗 ---------- */
+
+  /* 问号紧贴开关右侧：它是"这个开关什么意思"的附属说明，不能离远了读成独立按钮。
+     15px 是能画出清晰"?"的下限，再小会糊成一个点。 */
+  .qh {
+    flex: 0 0 15px; width: 15px; height: 15px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: inherit; font-size: 9.5px; line-height: 1; font-weight: 700;
+    color: var(--dimmer); background: var(--hover-2);
+    border: 1px solid var(--line-2); border-radius: 50%;
+    cursor: help; transition: color .14s, border-color .14s, background .14s;
+  }
+  .qh:hover, .qh.on { color: var(--accent); border-color: var(--seg-on-line); background: var(--on-bg); }
+
+  /* 浮窗用 position:fixed + JS 定位：.pbody 是滚动容器，绝对定位会被裁掉 */
+  .qtip {
+    position: fixed; z-index: 90; width: 268px; max-width: calc(100vw - 16px);
+    background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 9px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.42), 0 2px 6px rgba(0,0,0,.2);
+    padding: 9px 11px 8px; font-size: 10.5px; line-height: 1.62; color: var(--dim);
+    opacity: 0; transform: translateY(-3px); pointer-events: none;
+    transition: opacity .14s ease, transform .14s ease;
+  }
+  .qtip.show { opacity: 1; transform: none; pointer-events: auto; }
+  .qtip::before {
+    content: ""; position: absolute; top: -5px; left: var(--ax, 232px); width: 8px; height: 8px;
+    background: var(--panel-2); border-left: 1px solid var(--line-2); border-top: 1px solid var(--line-2);
+    transform: rotate(45deg); border-top-left-radius: 2px;
+  }
+  .qtip.below::before {
+    top: auto; bottom: -5px; transform: rotate(225deg); border-radius: 0 0 2px 0;
+  }
+  .qtip .qh-t { font-size: 11px; font-weight: 600; color: var(--txt); margin-bottom: 5px; }
+  .qtip .qh-r { display: flex; gap: 7px; margin-top: 5px; }
+  .qtip .qh-r b { color: var(--txt); font-weight: 500; }
+  .qtip .qh-k {
+    flex: 0 0 17px; height: 15px; margin-top: 1px; border-radius: 4px;
+    font-size: 9px; font-weight: 700; line-height: 15px; text-align: center;
+  }
+  .qtip .qh-k.off { color: var(--dim); background: var(--hover); }
+  .qtip .qh-k.on { color: var(--seg-on-fg); background: var(--seg-on-bg); }
+  .qtip .qh-f {
+    margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line);
+    font-size: 9.5px; line-height: 1.55; color: var(--dimmer);
+  }
+
+  .kbdbtn {
+    font-family: Consolas, monospace; font-size: 10px; color: var(--txt);
+    background: var(--kbd-bg); border: 1px solid var(--line-2); border-bottom-width: 2px;
+    border-radius: 6px; padding: 4px 7px; cursor: pointer; letter-spacing: .3px;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  .kbdbtn:hover { background: var(--hover); }
+  .kbdbtn.rec { color: var(--accent); border-color: var(--accent); animation: recPulse 1.1s ease-in-out infinite; }
+  @keyframes recPulse { 50% { opacity: .55; } }
+
+  /* ---------- 提示音：试听 + 音色选择 ---------- */
+
+  /* 试听：和开关并排的小胶囊。宽度靠内容撑，不能让它把标签挤换行 */
+  .playbtn {
+    display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+    font: inherit; font-size: 10.5px; color: var(--txt); white-space: nowrap;
+    background: var(--hover-2); border: 1px solid var(--line-2); border-radius: 6px;
+    padding: 4px 8px; cursor: pointer;
+    transition: background .14s, color .14s, border-color .14s;
+  }
+  .playbtn:hover { background: var(--hover); color: var(--accent); border-color: var(--seg-on-line); }
+  .playbtn.on { color: var(--accent); border-color: var(--accent); }
+  .playbtn svg { width: 9px; height: 9px; flex: 0 0 9px; }
+  .playbtn:disabled { opacity: .55; cursor: default; }
+
+  /* 音色：右侧下拉按钮，点开时箭头翻上去 */
+  .pickbtn {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    max-width: 190px; font: inherit; font-size: 11px; color: var(--txt);
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 7px;
+    padding: 5px 8px 5px 10px; cursor: pointer;
+    transition: background .14s, border-color .14s, color .14s;
+  }
+  .pickbtn:hover { background: var(--hover-2); border-color: var(--seg-on-line); }
+  .pickbtn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  .pickbtn .lb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pickbtn .chev { width: 11px; height: 11px; flex: 0 0 11px; color: var(--dim); transition: transform .18s, color .18s; }
+  .pickbtn[aria-expanded="true"] .chev { transform: rotate(180deg); color: var(--accent); }
+
+  /* 展开区：0fr→1fr 做高度动画。用 max-height 会写死一个上限，
+     选项增减时要么切一半要么留一截空白，grid 这个写法不用管具体高度。 */
+  .sfold {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows .2s ease;
+  }
+  .sfold.open { grid-template-rows: 1fr; }
+  .sfold > .sclip { overflow: hidden; min-height: 0; }
+
+  .sopts {
+    margin: 5px 0 2px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--panel); overflow: hidden;
+  }
+  .sopt {
+    display: flex; align-items: center; gap: 7px; width: 100%;
+    min-height: 33px; padding: 5px 9px; border: 0;
+    background: transparent; font: inherit; font-size: 11.2px; color: var(--txt);
+    text-align: left; cursor: pointer; transition: background .12s, color .12s;
+  }
+  .sopt + .sopt { border-top: 1px solid var(--line); }
+  /* .sopt 设了 display:flex，会把 [hidden] 的 display:none 盖掉，必须显式写回来 */
+  .sopt[hidden] { display: none; }
+  .sopt:hover { background: var(--hover-2); }
+  .sopt.on { background: var(--on-bg); color: var(--on-fg); }
+  .sopt .no {
+    flex: 0 0 15px; font-family: Consolas, monospace; font-size: 9px;
+    color: var(--dimmer); text-align: center;
+  }
+  .sopt .nm { flex: 0 0 auto; white-space: nowrap; }
+  .sopt .hint2 {
+    flex: 1; min-width: 0; font-size: 9.6px; color: var(--dimmer);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sopt.on .hint2 { color: var(--dim); }
+  .sopt .du { flex: 0 0 auto; font-family: Consolas, monospace; font-size: 9px; color: var(--dimmer); }
+  .sopt .ck { width: 11px; height: 11px; flex: 0 0 11px; color: var(--accent); opacity: 0; }
+  .sopt.on .ck { opacity: 1; }
+  .sopt .badge2 {
+    flex: 0 0 auto; font-size: 9px; color: var(--warn-fg); background: var(--warn-bg);
+    border: 1px solid var(--warn-line); border-radius: 5px; padding: 1px 5px;
+  }
+  .sopt.sub { min-height: 30px; font-size: 10.8px; color: var(--dim); }
+  .sopt.sub .nm { color: var(--dim); }
+  .sopt[disabled] { opacity: .6; cursor: default; }
+  .sfold .sn { padding: 2px 2px 6px; font-size: 9.5px; color: var(--dimmer); line-height: 1.5; }
+
+  .pstate {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; margin-bottom: 1px; border-radius: 9px;
+    border: 1px solid var(--warn-line); background: var(--warn-bg);
+    font-size: 11px; color: var(--warn-fg);
+  }
+  .pstate.off { border-color: var(--line); background: var(--panel); color: var(--dim); }
+  .pstate b { font-weight: 600; }
+  .pstate .mono { font-family: Consolas, monospace; font-size: 10.5px; color: var(--warn-sub); margin-left: auto; }
+  .pstate.off .mono { color: var(--dimmer); }
+  .pstate .mini {
+    font: inherit; font-size: 10px; padding: 4px 8px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(251,191,36,.4); background: rgba(251,191,36,.12); color: var(--warn-fg);
+    flex: 0 0 auto;
+  }
+  .pstate.off .mini { display: none; }
+
+  .lockchip {
+    display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+    font-size: 9.5px; color: var(--dim); background: var(--chip-bg);
+    border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px;
+  }
+  .lockchip svg { width: 9px; height: 9px; }
+  .strow.locked { min-height: 34px; }
+  .strow.locked .stl { color: var(--dim); }
+
+  .danger {
+    width: 100%; margin-top: 7px; height: 30px; border-radius: 8px; cursor: pointer; font: inherit;
+    font-size: 11.2px; color: var(--danger-fg);
+    border: 1px solid var(--danger-line); background: var(--danger-bg);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background .14s;
+  }
+  .danger:hover { background: rgba(229,72,77,.16); }
+  .danger:disabled { opacity: .5; cursor: default; }
+
+  /* 滑块 */
+  .slider { position: relative; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+  .slider input {
+    -webkit-appearance: none; appearance: none; width: 90px; height: 3px; border-radius: 2px;
+    background: var(--sw-off); outline: none; cursor: pointer; margin: 0;
+  }
+  .slider input::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.35);
+    cursor: pointer;
+  }
+  .slider .pv { font-family: Consolas, monospace; font-size: 10px; color: var(--dim); width: 26px; text-align: right; }
+
+  /* 关于页 */
+  .about-hero { display: flex; gap: 12px; align-items: center; padding: 2px 0 14px; }
+  .about-hero .g {
+    width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
+    background: linear-gradient(150deg,#2c6ef2,#1a45b8);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    box-shadow: 0 8px 20px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .about-hero .t1 { font-size: 14px; font-weight: 600; }
+  .about-hero .t2 { font-size: 10.5px; color: var(--dimmer); margin-top: 3px; }
+  .about-hero .chk {
+    margin-left: auto; font: inherit; font-size: 10.5px; padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; border: 1px solid var(--line-2); background: var(--hover-2); color: var(--dim);
+    flex: 0 0 auto;
+  }
+  .about-hero .chk:hover { background: var(--hover); color: var(--txt); }
+
+  .linkrow {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    min-height: 38px; border: 0; border-bottom: 1px solid var(--line);
+    background: transparent; font: inherit; font-size: 11.8px; color: var(--txt);
+    text-align: left; cursor: pointer; padding: 0;
+  }
+  .linkrow:hover { color: var(--accent); }
+  .linkrow .chev { margin-left: auto; color: var(--dimmer); flex: 0 0 auto; }
+  .linkrow > svg:first-child { width: 13px; height: 13px; color: var(--dim); flex: 0 0 13px; }
+  .linkrow .tag { margin-left: auto; font-size: 10px; color: var(--ok); flex: 0 0 auto; }
+  .linkrow.readonly { cursor: default; }
+  .linkrow.readonly:hover { color: var(--txt); }
+
+  .expand {
+    display: none; padding: 8px 10px 10px; margin: 2px 0 6px;
+    border-radius: 8px; background: var(--panel); border: 1px solid var(--line);
+    font-size: 10.5px; color: var(--dim); line-height: 1.9;
+  }
+  .expand.show { display: block; }
+  .expand kbd { margin: 0 2px; }
+
+  .privacy {
+    margin-top: 12px; font-size: 9.8px; color: var(--dimmer); line-height: 1.6;
+    display: flex; gap: 6px;
+  }
+  .privacy svg { width: 11px; height: 11px; flex: 0 0 11px; margin-top: 2px; color: var(--ok); }
+
+  .sfoot {
+    flex: 0 0 50px; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border-top: 1px solid var(--line);
+  }
+  .sfoot .fnote {
+    flex: 1; min-width: 0; font-size: 9.8px; color: var(--dimmer); line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .btn-ghost {
+    font: inherit; font-size: 11px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line-2); background: transparent; color: var(--dim);
+    flex: 0 0 auto;
+  }
+  .btn-ghost:hover { background: var(--hover); color: var(--txt); }
+  .btn-prim {
+    font: inherit; font-size: 11.5px; font-weight: 600; padding: 7px 16px; border-radius: 7px;
+    cursor: pointer; border: 0; color: #fff; flex: 0 0 auto;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 6px 16px rgba(37,99,235,.34);
+  }
+
+  /* 顶部提示条（改快捷键失败等） */
+  #toast {
+    position: fixed; left: 50%; bottom: 62px; transform: translateX(-50%) translateY(8px);
+    max-width: calc(100vw - 40px); padding: 8px 14px; border-radius: 9px;
+    background: var(--panel-2); border: 1px solid var(--line-2);
+    color: var(--txt); font-size: 11.5px; line-height: 1.5;
+    box-shadow: 0 14px 34px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 30;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.bad { border-color: rgba(248,113,113,.5); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <button id="btnBack" title="返回">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+  </button>
+  <span class="logo"></span>
+  <span class="name">屏幕扫码</span>
+  <span class="ver" id="tbVer">v0.3</span>
+  <span id="tbTitle">设置</span>
+  <span class="spacer"></span>
+
+  <button class="wbtn" id="btnSettings" title="设置">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+    </svg>
+  </button>
+  <button class="wbtn" id="btnMin" title="最小化">
+    <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+  </button>
+  <button class="wbtn" id="btnMax" title="最大化">
+    <svg id="icoMax" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
+      <rect x="2.4" y="2.4" width="7.2" height="7.2" rx="1"/>
+    </svg>
+    <svg id="icoRestore" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
+      <rect x="2.2" y="4.6" width="5.2" height="5.2" rx=".9"/>
+      <path d="M4.4 4.6V3.5a.9.9 0 01.9-.9h3.2a.9.9 0 01.9.9v3.2a.9.9 0 01-.9.9H7.4"/>
+    </svg>
+  </button>
+  <button class="wbtn close" id="btnClose" title="关闭">
+    <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </button>
+</div>
+
+<!-- ==================== 主界面 ==================== -->
+<main id="main">
+  <div class="shell">
+    <div class="hero">
+      <div class="glyph">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/>
+          <rect x="8" y="8" width="8" height="8" rx="1.2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>框选屏幕上的二维码</h1>
+        <p>框住屏幕上任意二维码即可读出内容；需要微信授权时可切到手机环境。</p>
+      </div>
+    </div>
+
+    <button id="btnStart">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
+      <span class="txt">开始框选</span>
+      <span class="grow"></span>
+      <kbd id="tbHotkey">Alt+Shift+Q</kbd>
+    </button>
+
+    <div class="cards">
+      <div class="card">
+        <div class="label">微信环境</div>
+        <div class="val"><span class="dot" id="wxDot"></span><span id="wxVal">检测中</span></div>
+        <div class="sub" id="wxSub">正在探测本机微信</div>
+      </div>
+      <div class="card">
+        <div class="label">移动端环境</div>
+        <div class="val"><span class="dot" id="pxDot"></span><span id="pxVal">未启用</span></div>
+        <div class="sub" id="pxSub">按需启动，平时不占后台</div>
+      </div>
+    </div>
+
+    <div id="proxyBanner">
+      <div class="ring"></div>
+      <div class="txt">
+        <div class="t1" id="proxyText">移动端环境运行中</div>
+        <div class="t2">系统代理临时指向本机，停止即还原</div>
+      </div>
+      <button id="proxyStop">关闭并还原</button>
+    </div>
+
+    <div class="steps">
+      <div id="stepsIdle">
+        <div class="sec">使用流程</div>
+        <div class="step"><i>1</i><span>在浏览器里打开带二维码的页面，让二维码完整显示</span></div>
+        <div class="step"><i>2</i><span>按 <b id="hintHotkey">Alt+Shift+Q</b> 调出取景框，套住二维码；码会刷新时按 <b>空格</b> 切连续扫描</span></div>
+        <div class="step"><i>3</i><span>按底部结果条的结论操作；提示需要手机环境时，点主按钮并确认</span></div>
+      </div>
+      <div id="stepsProxy" style="display:none">
+        <div class="sec">接下来</div>
+        <div class="step"><i>1</i><span>链接已复制、微信已切到前台：打开「文件传输助手」</span></div>
+        <div class="step"><i>2</i><span>按 <b>Ctrl+V</b> 粘贴发送，然后点开这条链接</span></div>
+        <div class="step"><i>3</i><span>等它自动完成授权；代理到点会自动关闭并还原</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- 底栏固定在窗口底部：窗口拉到最小、内容需要滚动时，退出按钮也不会被挤到看不见 -->
+<footer>
+  <div class="fwrap">
+    <div class="frow">
+      <div class="keys" id="hintKeys">
+        <b>框选后：</b><kbd>空格</kbd> 连续 <kbd>C</kbd> 复制 <kbd>R</kbd> 重置 <kbd>Esc</kbd> 退出
+      </div>
+      <button id="btnQuit">退出程序</button>
+    </div>
+  </div>
+</footer>
+
+<!-- ==================== 设置面板 ==================== -->
+<section id="settings">
+  <nav class="tabs">
+    <button class="tab on" data-pane="scan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>
+      扫码
+    </button>
+    <button class="tab" data-pane="proxy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/></svg>
+      移动端
+    </button>
+    <button class="tab" data-pane="appearance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6"/></svg>
+      外观
+    </button>
+    <button class="tab" data-pane="about">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor" stroke="none"/></svg>
+      关于
+    </button>
+  </nav>
+
+  <div class="pbody">
+    <!-- ---------- 扫码 ---------- -->
+    <div class="pane on" data-pane="scan">
+      <div class="shell">
+        <div class="grp"><span>框选</span><i></i></div>
+        <div class="strow">
+          <div class="stl">全局快捷键<em>在任何窗口按下都能开始框选</em></div>
+          <button class="kbdbtn" id="btnHotkey">Alt+Shift+Q</button>
+        </div>
+        <div class="strow">
+          <div class="stl">扫描方式<em>码会刷新时用连续模式</em></div>
+          <div class="seg" data-key="scanMode">
+            <button data-v="single">单次</button>
+            <button data-v="continuous">连续</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">识别后自动复制到剪贴板</div>
+          <div class="sw" data-key="autoCopy"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">记住上次的框选位置<em>下次框选从同一块区域开始</em></div>
+          <div class="sw" data-key="rememberBox"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">扫描时隐藏主窗口<em>取景框独占屏幕，少一点干扰</em></div>
+          <div class="sw" data-key="hideLauncher"><i></i></div>
+        </div>
+
+        <div class="grp"><span>判断与提示</span><i></i></div>
+        <div class="strow">
+          <div class="stl">自动判断是否需要手机环境<em>关闭后只读码，不提示代理</em></div>
+          <div class="sw" data-key="autoJudge"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">结果条停留时长</div>
+          <div class="seg" data-key="resultDwell">
+            <button data-v="short">短</button>
+            <button data-v="medium">中</button>
+            <button data-v="long">长</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">识别成功时提示音<em>先试听，再决定要不要开</em></div>
+          <button class="playbtn" id="btnSoundTest" type="button" title="试听当前音色">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <span>试听</span>
+          </button>
+          <div class="sw" data-key="sound"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">提示音音色</div>
+          <button class="pickbtn" id="btnSoundPick" type="button" aria-expanded="false" aria-controls="soundFold">
+            <span class="lb" id="soundPickLabel">双音上行</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg>
+          </button>
+        </div>
+        <!-- 音色展开区：点右侧按钮展开，选中后自动收起 -->
+        <div class="sfold" id="soundFold">
+          <div class="sclip">
+            <div class="sopts" id="soundOpts">
+              <!-- 6 个内置音色由 launcher.js 按 QRSound.list() 生成，避免名字/时长两处维护 -->
+              <button class="sopt" data-sid="custom" id="optCustom" type="button">
+                <span class="no">＋</span>
+                <span class="nm">自定义</span>
+                <span class="hint2" id="customHint">导入本地音频文件</span>
+                <span class="du" id="customMeta"></span>
+                <svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.6l4.4 4.4L19 6.6"/></svg>
+              </button>
+              <button class="sopt sub" id="optReimport" type="button" hidden>
+                <span class="no"></span>
+                <span class="nm">重新导入…</span>
+                <span class="hint2" id="customFile"></span>
+              </button>
+            </div>
+            <div class="sn" id="soundNote">内置音色为现场合成，不占安装包体积；自定义音色会存进 <code>sounds\</code>。</div>
+          </div>
+        </div>
+
+        <div class="grp"><span>交给微信</span><i></i></div>
+        <div class="strow">
+          <div class="stl">全自动打开链接<em>在「搜一搜」里搜到并点开第一条结果</em></div>
+          <div class="sw" data-key="autoOpen"><i></i></div>
+          <button class="qh" id="btnAutoOpenHelp" type="button"
+                  aria-label="全自动打开链接说明" aria-describedby="qTip">?</button>
+        </div>
+        <div class="strow dim" id="rowAutoMode">
+          <div class="stl">点击方式<em>找不到就依次换下一种，都不行就停手</em></div>
+          <div class="seg" data-key="autoOpenMode">
+            <button data-v="auto">自动</button>
+            <button data-v="uia">无障碍</button>
+            <button data-v="ocr">文字识别</button>
+            <button data-v="region">区域</button>
+          </div>
+        </div>
+
+        <div class="grp"><span>诊断</span><i></i></div>
+        <div class="strow">
+          <div class="stl">时间测试<em>默认关闭；开启后仅为后续耗时测量留位，不触发任何运行</em></div>
+          <div class="sw" data-key="timingTest"><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- 移动端 ---------- -->
+    <div class="pane" data-pane="proxy">
+      <div class="shell">
+        <div class="pstate off" id="pxState">
+          <span class="dot" id="pxStateDot"></span>
+          <b id="pxStateText">移动端环境未启用</b>
+          <span class="mono" id="pxStateRemain"></span>
+          <button class="mini" id="pxStateStop">立即停止</button>
+        </div>
+
+        <div class="grp"><span>运行环境</span><i></i></div>
+        <div class="strow">
+          <div class="stl">手机环境依赖<em id="envHint">未检测：程序自带运行时，无需另装</em></div>
+          <span class="tag" id="envTag">未检测</span>
+          <button class="mini" id="btnEnvCheck" type="button">检测</button>
+        </div>
+
+        <div class="grp"><span>什么时候启动</span><i></i></div>
+        <div class="strow">
+          <div class="stl">需要代理时的默认答案</div>
+          <div class="seg" data-key="proxyAnswer">
+            <button data-v="ask">每次问我</button>
+            <button data-v="auto">自动开启</button>
+            <button data-v="off">不启用</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">保持时长<em>到点自动关闭并还原系统代理</em></div>
+          <div class="seg" data-key="proxyTtl">
+            <button data-v="10">10 秒</button>
+            <button data-v="60">1 分</button>
+            <button data-v="180">3 分</button>
+            <button data-v="300">5 分</button>
+            <button data-v="0">不限</button>
+          </div>
+        </div>
+
+        <div class="grp"><span>连接方式</span><i></i></div>
+        <div class="strow" id="rowProxyScope">
+          <div class="stl">代理范围<em>仅目标站＝只接管那条链接所在的站（跳转域名会在跳转时自动加入）；全部站点＝所有 HTTPS 都经代理</em></div>
+          <div class="seg" data-key="proxyScope">
+            <button data-v="target">仅目标站</button>
+            <button data-v="all">全部站点</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">代理模式<em>PAC 让系统按域名分流（支持"仅目标站"）；全局改写整个系统代理（只能全量）</em></div>
+          <div class="seg" data-key="proxyMode">
+            <button data-v="global">全局</button>
+            <button data-v="pac">PAC 兼容</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">代理日志<em>记录访问地址只用于排查；默认关闭</em></div>
+          <div class="seg" data-key="proxyLog">
+            <button data-v="off">关闭</button>
+            <button data-v="host">仅域名</button>
+            <button data-v="full">完整</button>
+          </div>
+        </div>
+
+        <div class="grp"><span>安全兜底 · 不可关闭</span><i></i></div>
+        <div class="strow locked">
+          <div class="stl">关闭软件时还原系统代理</div>
+          <span class="lockchip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 018 0v3.5"/></svg>强制
+          </span>
+        </div>
+        <div class="strow locked">
+          <div class="stl">程序崩溃 / 被强杀后自动还原</div>
+          <span class="lockchip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 018 0v3.5"/></svg>强制
+          </span>
+        </div>
+        <button class="danger" id="btnRestoreProxy">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1016 0"/><path d="M4 12H2.2M4 12l2.6-2.6M4 12l2.6 2.6"/></svg>
+          一键还原系统代理
+        </button>
+      </div>
+    </div>
+
+    <!-- ---------- 外观 ---------- -->
+    <div class="pane" data-pane="appearance">
+      <div class="shell">
+        <div class="grp"><span>外观</span><i></i></div>
+        <div class="strow">
+          <div class="stl">主题</div>
+          <div class="seg" data-key="theme">
+            <button data-v="dark">深色</button>
+            <button data-v="light">浅色</button>
+            <button data-v="system">跟随系统</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">取景框外遮罩浓度<em>调低能看清框外内容，调高更聚焦</em></div>
+          <div class="slider">
+            <input type="range" id="maskRange" min="30" max="85" step="5" value="60">
+            <span class="pv" id="maskPv">60%</span>
+          </div>
+        </div>
+
+        <div class="grp"><span>窗口行为</span><i></i></div>
+        <div class="strow">
+          <div class="stl">开机自动启动</div>
+          <div class="sw" data-key="autoLaunch"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">窗口置顶<em>框选时不会被其他窗口盖住</em></div>
+          <div class="sw" data-key="alwaysOnTop"><i></i></div>
+        </div>
+        <div class="strow">
+          <div class="stl">点关闭按钮时</div>
+          <div class="seg" data-key="closeAction">
+            <button data-v="quit">退出程序</button>
+            <button data-v="tray">收到托盘</button>
+          </div>
+        </div>
+        <div class="strow">
+          <div class="stl">取景框默认尺寸</div>
+          <div class="seg" data-key="frameSize">
+            <button data-v="small">小</button>
+            <button data-v="medium">中</button>
+            <button data-v="large">大</button>
+          </div>
+        </div>
+
+        <div class="privacy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+          <span>关闭程序时若移动端环境仍在运行，会先还原系统代理再退出——这一条不受上面任何设置影响。</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- 关于 ---------- -->
+    <div class="pane" data-pane="about">
+      <div class="shell">
+        <div class="about-hero">
+          <div class="g">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 8V5.5A2.5 2.5 0 015.5 3H8M16 3h2.5A2.5 2.5 0 0121 5.5V8M21 16v2.5a2.5 2.5 0 01-2.5 2.5H16M8 21H5.5A2.5 2.5 0 013 18.5V16"/>
+              <rect x="8" y="8" width="8" height="8" rx="1.2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="t1">屏幕扫码</div>
+            <div class="t2"><span id="abVersion">v0.4.0</span> · <span id="abLatest">已是最新版本</span></div>
+          </div>
+          <button class="chk" id="btnCheck">检查更新</button>
+        </div>
+
+        <div class="grp"><span>排障与文件</span><i></i></div>
+        <button class="linkrow" data-open="logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 014.5 6h4l2 2.5h7A1.5 1.5 0 0119 10v7.5A1.5 1.5 0 0117.5 19h-13A1.5 1.5 0 013 17.5v-10z"/></svg>
+          打开日志目录
+          <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+        </button>
+        <button class="linkrow" data-open="certs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/></svg>
+          打开证书与配置目录
+          <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+        </button>
+        <button class="linkrow" id="btnHelpKeys">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="11" rx="2"/><path d="M7.5 19.5h9"/></svg>
+          快捷键与使用说明
+          <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+        </button>
+        <div class="expand" id="helpKeys">
+          取景框：<kbd>空格</kbd> 冻结/连续 · <kbd>C</kbd> 复制 · <kbd>R</kbd> 重置选框 ·
+          <kbd>P</kbd> 暂停解码 · <kbd>Esc</kbd> 退出<br>
+          结果条：鼠标移到条上会暂停自动收起，点 <kbd>✕</kbd> 或按 <kbd>Esc</kbd> 收起<br>
+          主窗口：<kbd>Enter</kbd> 开始框选 · 双击标题栏最大化
+        </div>
+        <div class="linkrow readonly">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7 3.4v5.4c0 4.5-2.9 7.9-7 9.4-4.1-1.5-7-4.9-7-9.4V6.2l7-3.4z"/></svg>
+          根证书状态
+          <span class="tag" id="abCert">检测中</span>
+        </div>
+        <button class="linkrow" id="btnClearLogs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.6h5V7M6.5 7l1 12.4h9L17.5 7"/></svg>
+          清空日志<span class="tag" id="abLogs">-</span>
+          <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+        </button>
+
+        <div class="grp"><span>危险操作</span><i></i></div>
+        <button class="danger" id="btnResetAll">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.6h5V7M6.5 7l1 12.4h9L17.5 7"/></svg>
+          重置全部设置
+        </button>
+
+        <div class="privacy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.2 7.8-7.5 9-4.3-1.2-7.5-4.5-7.5-9V6L12 3z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+          <span>全部功能在本机完成，不联网、不上传任何二维码内容与系统代理配置。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sfoot">
+    <span class="fnote" id="sFootNote">改动立即生效，无需重启</span>
+    <button class="btn-ghost" id="btnResetPane">恢复默认</button>
+    <button class="btn-prim" id="btnDone">完成</button>
+  </div>
+</section>
+
+<!-- 开关说明浮窗：挂在 body 下、fixed 定位，避免被 .pbody 的滚动裁切 -->
+<div class="qtip" id="qTip" role="tooltip">
+  <div class="qh-t">全自动打开链接</div>
+  <div class="qh-r">
+    <span class="qh-k off">关</span>
+    <div>工具把链接填进「搜一搜」并回车，停在结果页；<b>最后那一下由你点</b>。全程不点鼠标，不会点偏。</div>
+  </div>
+  <div class="qh-r">
+    <span class="qh-k on">开</span>
+    <div>连「点第一条结果」也代做，并检查是否真的打开了网页。怎么找目标由「点击方式」决定：<b>自动</b>依次尝试 无障碍→文字识别→区域，任一种命中就点；选其它则只用那一种。找不到目标就不点，点了没打开就停手，不重试、不乱点。</div>
+  </div>
+  <div class="qh-f">三种方式都只认结果页里的「访问网页」，不碰聊天记录。<br>无障碍＝读界面结构，最稳；文字识别＝截图找字，需系统的中文 OCR；区域＝按版式找第一张结果卡片，微信大改版后可能失手。</div>
+</div>
+<div id="toast"></div>
+<script src="sound.js"></script>
+<script src="launcher.js"></script>
+</body>
+</html>
